@@ -1,0 +1,35 @@
+package com.ifsoft.rtmp;
+
+import org.red5.server.adapter.ApplicationAdapter;
+import org.jivesoftware.util.Log;
+
+
+import org.red5.server.api.IConnection;
+import org.red5.server.api.Red5;
+import org.red5.server.api.service.IServiceCapableConnection;
+
+public class RedfireApplication extends ApplicationAdapter
+{
+    public Boolean appStart ( )
+    {
+		return true;
+    }
+
+    public void appStop ( )
+    {
+
+    }
+
+	public void FCSubscribe (String stream) {
+		Log.info("FCSubscribe " + stream);
+
+		IConnection conn = Red5.getConnectionLocal();
+		IServiceCapableConnection service = (IServiceCapableConnection) conn;
+
+		if ( service != null )
+		{
+			( (IServiceCapableConnection) service ).invoke( "onFCSubscribe", new Object[] {stream} );
+		}
+
+	}
+}

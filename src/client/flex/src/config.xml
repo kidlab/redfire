@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<config>
+	<red5Url>rtmp:/sip</red5Url>
+	<sipRealm>asterisk</sipRealm>
+	<sipServer>10.10.20.86</sipServer>
+	<obProxy></obProxy>
+	<useEncryptedPwd>1</useEncryptedPwd>
+</config>

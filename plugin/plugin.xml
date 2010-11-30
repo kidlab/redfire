@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin>
+    <class>com.ifsoft.redfire.RedfirePlugin</class>
+    <name>Redfire</name>
+    <description>Red5 Plugin for Openfire</description>
+    <author>Dele Olajide</author>
+    <version>0.0.0.01</version>
+    <minServerVersion>3.6.0</minServerVersion> 
+
+    <!-- Admin console meta-data -->
+    <adminconsole>              
+
+    </adminconsole>
+</plugin>
