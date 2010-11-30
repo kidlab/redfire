@@ -5,8 +5,8 @@
     <name>Redfire</name>
     <description>Red5 Plugin for Openfire</description>
     <author>Dele Olajide</author>
-    <version>0.0.0.01</version>
-    <minServerVersion>3.6.0</minServerVersion> 
+    <version>0.0.0.02</version>
+    <minServerVersion>3.7.0</minServerVersion> 
 
     <!-- Admin console meta-data -->
     <adminconsole>              

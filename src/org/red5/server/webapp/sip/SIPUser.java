@@ -133,7 +133,7 @@ public class SIPUser implements SIPUserAgentListener, SIPRegisterAgentListener {
     private String realm;
 
     private String obproxy;
-    
+
     private String A1ParamMD5;
 
     public SIPUser( String sessionID, IConnection service, int sipPort, int rtpPort ) throws IOException {
@@ -187,7 +187,7 @@ public class SIPUser implements SIPUserAgentListener, SIPRegisterAgentListener {
             rtmpUser = new RTMPUser();
             SipStack.init();
             SipStack.debug_level = 8;
-            SipStack.log_path = "log";
+            SipStack.log_path =  ".." + File.separator + "logs";
 
             sip_provider = new SipProvider( null, sipPort );
             sip_provider.setOutboundProxy(new SocketAddress(opt_outbound_proxy));
@@ -571,9 +571,9 @@ public class SIPUser implements SIPUserAgentListener, SIPRegisterAgentListener {
     }
 
     public void setA1Parameter(String A1ParamMD5) {
-		this.A1ParamMD5 = A1ParamMD5;		
+		this.A1ParamMD5 = A1ParamMD5;
 	}
-	
+
 	public int getSipPort() {
 		return this.sipPort;
 	}
