@@ -1,0 +1,10 @@
+<plugin>
+    <name>Redfire for Spark</name>
+    <version>0.0.4</version>
+    <author>Dele Olajide</author>
+    <homePage>http://code.google.com/p/redfire</homePage>
+    <email>dele@uk2.net</email>
+    <description>Adds support for Redfire audio and video streaming to the Spark IM client.</description>
+    <class>org.jivesoftware.spark.plugin.red5.Red5Plugin</class>
+    <minSparkVersion>2.0.0.0</minSparkVersion>
+</plugin>

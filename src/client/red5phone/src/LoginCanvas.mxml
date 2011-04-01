@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="256" height="258" backgroundColor="#3E413E" borderStyle="solid" 
+    cornerRadius="0" backgroundAlpha="0.0" creationComplete="init()">
+	<mx:Style>
+		Button {
+		   color: white;
+		   fill-colors: #ff0000, #dd0000;
+		}
+	</mx:Style>
+	
+	<mx:Script>
+		<![CDATA[
+                         
+                         import mx.utils.UIDUtil;
+                         
+                        private var myuid:String; 
+			private var so:SharedObject;
+			
+			private function init():void {
+				myuid = UIDUtil.createUID();
+				so = SharedObject.getLocal("Red5Phone");				
+			}
+			
+			public function setParameters( obProxy:String, realm:String, server:String, red5url:String, phone:String, username:String, password:String, conference:String, autologin:Boolean):void {
+			
+
+				if (obProxy == null || obProxy == "") {
+
+					if(so.data.obProxy){
+						obproxyTxt.text = so.data.obProxy;
+					} else {
+						obproxyTxt.text = "";
+					}
+				} else obproxyTxt.text = obProxy;
+				
+				
+				if (realm == null || realm == "") {
+
+					if(so.data.realm){
+						realmTxt.text = so.data.realm;
+					} else {
+						realmTxt.text = "192.168.10.1";
+					}
+				} else realmTxt.text = realm;
+				
+
+				if (server == null || server == "") {
+
+					if(so.data.server){
+						serverTxt.text = so.data.server;
+					} else {
+						serverTxt.text = "192.168.10.1";
+					}
+				} else serverTxt.text = server;
+				
+
+
+				if (red5url == null || red5url == "") {
+
+					if(so.data.red5url){
+						urlTxt.text = so.data.red5url;
+					} else {
+						urlTxt.text = "rtmp:/sip";
+					}
+				} else urlTxt.text = red5url;
+
+
+				if (username == null || username == "") {
+
+					if(so.data.username){
+						usernameTxt.text = so.data.username;
+					} else {
+						usernameTxt.text = "";
+					}
+				} else usernameTxt.text = username;
+				
+
+				if (password == null || password == "") {
+
+					if(so.data.password){
+						passwordTxt.text = so.data.password;
+					} else {
+						passwordTxt.text = "";
+					}
+				} else passwordTxt.text = password;
+				
+				if (phone == null || phone == "") {
+
+					if(so.data.phone){
+						phoneTxt.text = so.data.phone;
+					} else {
+						phoneTxt.text = "";
+					}
+				} else phoneTxt.text = phone;
+
+				if (conference == null || conference == "") {
+
+					if(so.data.conference){
+						conferenceTxt.text = so.data.conference;
+					} else {
+						conferenceTxt.text = "";
+					}
+				} else conferenceTxt.text = conference;
+				
+
+				
+				if (autologin && serverTxt.text != "" && usernameTxt.text != "" && passwordTxt.text != "" && phoneTxt.text != "" && obproxyTxt.text != "") {
+					this.parentApplication.login(obproxyTxt.text, myuid, phoneTxt.text, usernameTxt.text, passwordTxt.text, realmTxt.text, serverTxt.text, urlTxt.text, conferenceTxt.text);
+				}
+				
+			}
+			
+			private function login():void {
+				
+				this.parentApplication.login(obproxyTxt.text, myuid, phoneTxt.text,usernameTxt.text, passwordTxt.text, realmTxt.text, serverTxt.text, urlTxt.text, conferenceTxt.text);
+				so.data.phone      = phoneTxt.text;
+				so.data.username   = usernameTxt.text;
+				so.data.password   = passwordTxt.text;
+				so.data.red5url    = urlTxt.text;
+				so.data.siprealm   = realmTxt.text;
+				so.data.sipserver  = serverTxt.text;
+				so.data.conference  = conferenceTxt.text;
+				so.data.obProxy    = obproxyTxt.text;
+				so.flush();				
+			}
+			
+			public function setMessage(message:String):void {
+				alertMessage.text = message;
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Text x="10" y="0" text="Phone#" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold"/>
+	<mx:TextInput x="107" y="1" width="137" id="phoneTxt" text="1001"/>
+	
+	<mx:Text x="10" y="30" text="Username" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold"/>
+	<mx:TextInput x="107" y="31" width="137" id="usernameTxt" text="1001"/>
+	
+	<mx:Text x="10" y="55" text="Password" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold"/>
+	<mx:TextInput x="107" y="56" width="137" displayAsPassword="true" id="passwordTxt" text="1001"/>
+	
+	<mx:Text x="10" y="80" text="Conference" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold" visible="true"/>
+	<mx:TextInput x="108" y="81" width="137" id="conferenceTxt" visible="true" text="1001" />
+
+	<mx:Text x="10" y="105" text="SIP Realm" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold" visible="true"/>
+	<mx:TextInput x="107" y="106" width="137" id="realmTxt" visible="true" text="192.168.1.90" />
+	
+	<mx:Text x="10" y="130" text="SIP Server" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold" visible="true"/>
+	<mx:TextInput x="107" y="131" width="137" id="serverTxt" visible="true" text="192.168.1.90" />
+
+	<mx:Text x="10" y="158" text="OB Proxy" width="89" height="23" fontSize="13" color="#E98F02" fontWeight="bold" visible="true"/>
+	<mx:TextInput x="107" y="159" width="137" id="obproxyTxt" visible="true"  text="192.168.1.90" />
+	
+	<mx:Text x="10" y="184" text="Red5 URL" width="85" height="20" fontSize="13" color="#E98F02" fontWeight="bold" visible="true"/>
+	<mx:TextInput x="107" y="185" width="137" id="urlTxt" visible="true" text="rtmp:/sip" />
+	
+	<mx:Button x="188" y="224" label="Login" click="login()" fillAlphas="[1.0, 1.0]" fillColors="[#FF0000, #DD0000]" color="#FFFFFF" themeColor="#DD0000"/>
+	<mx:Text x="10" y="226"  color="#FD0202" fontSize="9" id="alertMessage" width="106"/>
+	
+	
+</mx:Canvas>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:u="com.salesbuilder.util.*"  
+	xmlns:dv="com.salesbuilder.dataviz.*" 
+	width="100%" height="100%" 
+	backgroundAlpha="0"
+	icon="@Embed('/assets/icon_dashboard.png')"
+	label="Dashboard"
+	creationComplete="loadData()" xmlns:data="flash.data.*">
+	
+	<mx:Script>
+		<![CDATA[
+
+		import com.salesbuilder.model.Opportunity;
+		import com.salesbuilder.dataviz.OpportunityBubbleRenderer;
+		import com.salesbuilder.dao.OpportunityDAO;
+		import mx.charts.HitData;
+		import mx.collections.ArrayCollection;
+		import mx.graphics.Stroke;
+		import mx.graphics.SolidColor;
+
+		[Bindable]
+		public var opportunities:ArrayCollection;
+		
+		public function loadData():void
+		{
+			var min:Date = new Date(new Date().time - (1000 * 60 * 60 * 24 * 90));
+			var max:Date = new Date();
+			
+			hAxis.minimum = min;
+			hAxis.maximum = max;
+			
+			displayHeader(min, max);
+			
+			var dao:OpportunityDAO = new OpportunityDAO();
+			dao.getOpportunities(
+				function (result:ArrayCollection):void
+				{
+					opportunities = result;
+					calculatePipeline();
+				});
+		}
+			
+        protected function transferAmountFormat(value:Object, arg2:Object, arg3:Object):String
+        {
+            return ""+value;
+        }
+
+        private function formatDataTip(hitData:HitData):String
+        {
+            var name:String = hitData.item.name;
+            var revenue:Number = hitData.item.expectedAmount;
+            var date:Date = hitData.item.expectedCloseDate;
+            var probability:Number = hitData.item.probability;
+            return "<b>"+name+"</b><br>Customer: "+hitData.item.account.name+"<br>Transffered: "+String(revenue)+"<br>Date: "+date.toDateString()+"<br>Revenue: "+String(probability);
+        }
+        
+        public function calculatePipeline():void
+        {
+        	if (opportunities)
+        	{
+	        	var total:Number=0;
+	        	for (var i:int=0; i<opportunities.length; i++)
+	        	{
+	        		var opp:Opportunity = opportunities.getItemAt(i) as Opportunity;
+	        		
+	        		if (opp.expectedCloseDate>=hAxis.minimum && opp.expectedCloseDate<=hAxis.maximum)
+	        		{
+	        			total += opp.expectedAmount;
+	        		}
+	        	}
+	        	pipelineTotal.text = String(total);
+        	}
+        }
+        
+        private function displayHeader(min:Date, max:Date):void
+        {
+        	hMin.text = min.toDateString();
+        	hMax.text = max.toDateString();
+        	
+        	days.text = "(" + Math.floor((max.time - min.time) / (1000 * 60 * 60 * 24)) + " days )";
+        }
+        
+        private function axisChangeHandler(event:Event):void
+        {
+        	displayHeader(pz.horizontalAxisMinimum, pz.horizontalAxisMaximum);
+        	calculatePipeline();
+        }
+        
+        ]]>
+
+    </mx:Script>
+
+	<u:DragBitmap handle="{title}" data="{this}"/>
+
+    <mx:CurrencyFormatter id="cf" precision="0"/>
+    <mx:DateFormatter id="df"/>
+    <mx:NumberFormatter id="nf" precision="0"/>
+	
+	<mx:Canvas id="title" top="12" horizontalCenter="0">
+		<mx:HBox>
+			<mx:Label text="From" styleName="title"/>
+			<mx:Label id="hMin" styleName="title" />
+			<mx:Label text="to" styleName="title" />
+			<mx:Label id="hMax" text="{String(pz.horizontalAxisMaximum)}" styleName="title"/>
+			<mx:Label id="days" styleName="title"/>
+			<mx:Label text="Total Transferred:" top="18" styleName="title"/>
+			<mx:Label id="pipelineTotal" top="18" styleName="title"/>
+		</mx:HBox>
+	</mx:Canvas>
+    
+    <mx:BubbleChart id="chart" width="100%" height="100%" dataProvider="{opportunities}" showDataTips="true" dataTipFunction="formatDataTip"
+    	left="4" right="8" bottom="8" top="45">
+
+		<mx:horizontalAxis>
+			<mx:DateTimeAxis id="hAxis"/>
+		</mx:horizontalAxis>
+
+        <mx:horizontalAxisRenderers>
+        	<mx:AxisRenderer axis="{hAxis}" showLabels="true" canDropLabels="true">
+				<mx:axisStroke>
+					<mx:Stroke weight="1" color="#999999"/>
+				</mx:axisStroke>
+			</mx:AxisRenderer>
+    	</mx:horizontalAxisRenderers>
+
+		<mx:verticalAxis>
+			<mx:LinearAxis id="vAxis" labelFunction="transferAmountFormat" minimum="0" maximum="100000"/>
+		</mx:verticalAxis>
+
+        <mx:verticalAxisRenderers>
+        	<mx:AxisRenderer axis="{vAxis}">
+				<mx:axisStroke>
+					<mx:Stroke weight="1" color="#999999"/>
+				</mx:axisStroke>
+			</mx:AxisRenderer>
+        </mx:verticalAxisRenderers>
+    
+        <mx:series>
+            <mx:BubbleSeries yField="expectedAmount" xField="expectedCloseDate" radiusField="probability" itemRenderer="com.salesbuilder.dataviz.OpportunityBubbleRenderer"/>
+        </mx:series>
+        
+        <mx:backgroundElements>
+        	
+			<mx:GridLines direction="both" horizontalChangeCount="0" horizontalShowOrigin="true" verticalShowOrigin="true">
+				<mx:horizontalFill>
+					<mx:SolidColor color="#FFFFFF" />
+				</mx:horizontalFill>								
+				<mx:horizontalAlternateFill>
+					<mx:SolidColor color="#FFFFFF" />
+				</mx:horizontalAlternateFill>																		
+				<mx:horizontalStroke>
+					<mx:Stroke color="#EDEDE4" weight="1" />
+				</mx:horizontalStroke>
+				<mx:verticalStroke>
+					<mx:Stroke color="#EDEDE4" weight="1" />												
+				</mx:verticalStroke>									
+			</mx:GridLines>
+        
+        	<dv:PanAndZoom id="pz" axisChange="axisChangeHandler(event)"/>
+        </mx:backgroundElements>
+        
+    </mx:BubbleChart>
+
+</mx:Canvas>

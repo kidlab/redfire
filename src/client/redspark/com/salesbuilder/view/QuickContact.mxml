@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:c="com.salesbuilder.controls.*" xmlns:m="com.salesbuilder.model.*" 
+	width="350" height="300"
+	layout="absolute"
+	showCloseButton="true"
+	title="Quick Contact"	
+	close="PopUpManager.removePopUp(this)">
+
+	<mx:Script>
+		<![CDATA[
+		
+			import com.salesbuilder.dao.ContactDAO;
+			import mx.managers.PopUpManager;
+
+			private function save():void
+			{
+				if (manager.selectedItem)
+				{
+					contact.managerId = manager.selectedItem.contactId;
+				}
+				contact.firstName = firstName.text;
+				contact.lastName = lastName.text;
+				contact.title = contactTitle.text;
+				contact.lastUpdated = new Date().time;
+				
+				var dao:ContactDAO = new ContactDAO();
+				contact.accountId = contact.account.accountId;
+				contact.offlineOperation = "INSERT";
+				dao.createContact(contact,
+					function():void
+					{
+						contact.account.contacts.addItem(contact);
+					});
+
+				PopUpManager.removePopUp(this);		
+			}
+			
+			private function getFullName(item:Object):String{
+				return item.firstName + " " + item.lastName;
+			}
+			
+		]]>
+	</mx:Script>
+
+	<m:Contact id="contact"/>
+
+	<mx:Canvas backgroundColor="#FFFFFF" width="320" height="210" borderStyle="solid">
+		<mx:Label x="7" y="24" width="80" textAlign="right" text="First Name"/>
+		<c:TextInput x="102" y="19" id="firstName" text="{contact.firstName}" width="190"/>
+		<mx:Label x="7" y="59" width="80" textAlign="right" text="Last Name"/>
+		<c:TextInput x="102" y="54" id="lastName" text="{contact.lastName}" width="190"/>
+		<mx:Label x="7" y="94" width="80" textAlign="right" text="Account"/>
+		<c:TextInput x="102" y="89" text="{contact.account.name}" enabled="false" width="190"/>
+		<mx:Label x="7" y="129" width="80" textAlign="right" text="Title"/>
+		<c:TextInput x="102" y="124" id="contactTitle"  text="{contact.title}" width="190"/>
+		<mx:Label x="7" y="164" width="80" textAlign="right" text="Manager"/>
+		<c:ComboBox id="manager" x="102" y="159" dataProvider="{contact.account.contacts}" valueField="contactId" value="{contact.managerId}"
+			 width="190" labelFunction="getFullName"/>
+	</mx:Canvas>
+
+	<mx:ControlBar height="64">
+		<mx:Spacer width="-5"/>
+		<mx:Button label="Save" click="save()"/>
+	</mx:ControlBar>
+
+</mx:TitleWindow>

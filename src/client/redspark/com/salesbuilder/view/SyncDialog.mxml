@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" width="400" height="300"
+	showCloseButton="true" 
+	close="PopUpManager.removePopUp(this)"
+	paddingTop="12" verticalGap="8"
+	title="Offline Synchronization" currentState="hideDetails">
+	<mx:states>
+		<mx:State name="hideDetails">
+			<mx:RemoveChild target="{log}"/>
+			<mx:SetProperty target="{button1}" name="label" value="Show Details"/>
+			<mx:SetProperty name="height" value="150"/>
+		</mx:State>
+	</mx:states>
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			
+			public function logMessage(msg:String):void
+			{
+				log.text += msg + "\n";
+			}
+			
+			public function beginSync():void
+			{
+				pb.label = "Synchronizing...";
+			}
+			
+			public function completeSync(count:int):void
+			{
+				pb.label = "Synchronization complete ("+count+" items synchronized)";
+				pb.setProgress(100, 100);
+			}
+
+			private function toggleDetails():void
+			{
+				currentState = currentState==''?'hideDetails':'';
+				if (currentState=='')
+				{
+					callLater(setScroll);
+				}
+			}
+			
+			private function setScroll():void
+			{
+				log.verticalScrollPosition = log.maxVerticalScrollPosition;
+				this.validateNow(); 
+			}
+			
+		]]>
+	</mx:Script>
+
+	<mx:ProgressBar id="pb" indeterminate="true" width="100%" mode="manual"/>
+
+	<mx:TextArea id="log" width="100%" height="150"/>
+	
+	<mx:ControlBar height="70" paddingRight="16">
+		<mx:Spacer width="100%"/>
+		<mx:Button label="Hide Details" click="toggleDetails()" id="button1"/>
+		<mx:Button label="Close" click="PopUpManager.removePopUp(this)"/>
+	</mx:ControlBar>	
+	
+</mx:TitleWindow>

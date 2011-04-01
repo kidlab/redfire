@@ -1,0 +1,79 @@
+Buildfile: build.xml
+
+clean:
+   [delete] Deleting directory D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\build\classes\com
+   [delete] Deleting directory D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\build\classes\local
+   [delete] Deleting directory D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\build\classes\org
+   [delete] Deleting: D:\Work\Projects\2010.04.21-iTrader\Workspace\openfire_3_6_4\target\openfire\plugins\redfire.war
+
+init:
+
+compile:
+    [javac] Compiling 388 source files to D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\build\classes
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipUtil.java:108: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac] 	ourSipPort = sipProvider.getListeningPoint().getPort();
+    [javac] 	                        ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipUtil.java:540: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]             (sipProvider.getListeningPoint().getTransport());
+    [javac]                         ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipUtil.java:566: warning: [deprecation] createCSeqHeader(int,java.lang.String) in javax.sip.header.HeaderFactory has been deprecated
+    [javac]         cSeqHeader = headerFactory.createCSeqHeader(1, Request.INVITE);
+    [javac]                                   ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:153: warning: [deprecation] getSequenceNumber() in javax.sip.header.CSeqHeader has been deprecated
+    [javac]             	if (cseq.getSequenceNumber() < 2) {
+    [javac]             	        ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:229: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac] 		sipProvider.getListeningPoint().getTransport());
+    [javac] 		           ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:231: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]             throw new IOException(sipProvider.getListeningPoint().getTransport()
+    [javac]                                              ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:241: warning: [deprecation] createCSeqHeader(int,java.lang.String) in javax.sip.header.HeaderFactory has been deprecated
+    [javac]             cSeqHeader = headerFactory.createCSeqHeader(1, Request.REGISTER);
+    [javac]                                       ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:381: warning: [deprecation] getSequenceNumber() in javax.sip.header.CSeqHeader has been deprecated
+    [javac]             cSeqHeader.setSequenceNumber(cSeqHeader.getSequenceNumber()+1);
+    [javac]                                                    ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:381: warning: [deprecation] setSequenceNumber(int) in javax.sip.header.CSeqHeader has been deprecated
+    [javac]             cSeqHeader.setSequenceNumber(cSeqHeader.getSequenceNumber()+1);
+    [javac]                       ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:420: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]             fromURI.setTransportParam(sipProvider.getListeningPoint().getTransport());
+    [javac]                                                  ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:422: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]             fromURI.setPort(sipProvider.getListeningPoint().getPort());
+    [javac]                                        ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:451: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac]         ListeningPoint lp = sipProvider.getListeningPoint();
+    [javac]                                        ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:505: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac] 		sipProvider.getListeningPoint().getTransport());
+    [javac] 		           ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\RegisterProcessing.java:506: warning: [deprecation] getListeningPoint() in javax.sip.SipProvider has been deprecated
+    [javac] 	    contactURI.setPort(sipProvider.getListeningPoint().getPort());
+    [javac] 	                                  ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipServer.java:184: warning: [deprecation] createListeningPoint(int,java.lang.String) in javax.sip.SipStack has been deprecated
+    [javac]             lp = sipStack.createListeningPoint(sipPort, "tcp");
+    [javac]                          ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipServer.java:190: warning: [deprecation] createListeningPoint(int,java.lang.String) in javax.sip.SipStack has been deprecated
+    [javac]             lp = sipStack.createListeningPoint(sipPort, "udp");
+    [javac]                          ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipServer.java:753: warning: [deprecation] getSequenceNumber() in javax.sip.header.CSeqHeader has been deprecated
+    [javac]             cSeq.setSequenceNumber(cSeq.getSequenceNumber() + 1);
+    [javac]                                        ^
+    [javac] D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\src\com\sun\voip\server\SipServer.java:753: warning: [deprecation] setSequenceNumber(int) in javax.sip.header.CSeqHeader has been deprecated
+    [javac]             cSeq.setSequenceNumber(cSeq.getSequenceNumber() + 1);
+    [javac]                 ^
+    [javac] Note: Some input files use unchecked or unsafe operations.
+    [javac] Note: Recompile with -Xlint:unchecked for details.
+    [javac] 18 warnings
+
+jar:
+      [jar] Building jar: D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\plugin\lib\redfire.jar
+      [jar] Building jar: D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin\plugin\WEB-INF\lib\redfire.jar
+
+war:
+      [jar] Building jar: D:\Work\Projects\2010.04.21-iTrader\Workspace\openfire_3_6_4\target\openfire\plugins\redfire.war
+
+BUILD SUCCESSFUL
+Total time: 21 seconds

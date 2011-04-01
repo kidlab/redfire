@@ -1,0 +1,112 @@
+<html>
+<head>
+<title>Red5 Audio/Video Presence</title>
+<script type="text/javascript" src="flashobject.js"></script>
+<script type="text/javascript">
+
+	var theReciever;
+
+	function getParameter(string, parm, delim) {
+
+		 if (string.length == 0) {
+			return '';
+		 }
+
+		 var sPos = string.indexOf(parm + "=");
+
+		 if (sPos == -1) {return '';}
+
+		 sPos = sPos + parm.length + 1;
+		 var ePos = string.indexOf(delim, sPos);
+
+		 if (ePos == -1) {
+			ePos = string.length;
+		 }
+
+		 return unescape(string.substring(sPos, ePos));
+	}
+
+	function getPageParameter(parameterName, defaultValue) {
+
+		var s = self.location.search;
+
+		if ((s == null) || (s.length < 1)) {
+			return defaultValue;
+		}
+
+		s = getParameter(s, parameterName, '&');
+
+		if ((s == null) || (s.length < 1)) {
+			s = defaultValue;
+		}
+
+		return s;
+	}
+
+
+	function  setupFlash() {
+
+		var me = getPageParameter('me', 'test1');
+		var others = getPageParameter('others', 'test1|test2|test3')
+		var bw = getPageParameter('bw', '25600');
+		var pq = getPageParameter('pq', '0');
+		var fps = getPageParameter('fps', '15');
+		var msr = getPageParameter('msr', '8');
+		var url = getPageParameter('url', 'rtmp:/oflaDemo');
+		var key = getPageParameter('key', 'abc123');
+
+		var fo = new FlashObject("videoConf.lzx.swf", "lzapp", "100%", "100%", "6");
+		var users = others.split("$")
+		var sizeI = users.length
+
+		if (sizeI > 12) {
+			sizeI = 12;
+		}
+
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "lzapp");
+		fo.addParam("quality", "high");
+		fo.addParam("scale", "noscale");
+		fo.addParam("salign", "LT");
+		fo.addParam("menu", "false");
+
+		for (var i = 11; i >= 0; i--) {
+
+			var charI = i;
+
+			if (i == 10) {
+				charI = "A";
+			}
+
+			if (i == 11) {
+				charI = "B";
+			}
+
+			if (i >= sizeI) {
+				fo.addVariable("ns" + charI + "Name", "");
+			} else {
+				fo.addVariable("ns" + charI + "Name", users[i]);
+			}
+		}
+
+		fo.addVariable("url", url);
+
+		fo.addVariable("stream", me);
+		fo.addVariable("bandwidth", bw);
+		fo.addVariable("picQuality", pq);
+		fo.addVariable("framesPerSec", fps);
+		fo.addVariable("micSetRate", msr);
+		fo.addVariable("streamKey", key);
+
+		fo.write("red5content");
+		theReciever = me;
+
+	}
+
+</script>
+</head>
+
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupFlash()">
+<div id="red5content"></div>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<library>	
+	<class name="phoneConnection" extends="rtmpconnection">
+
+	<attribute name="red5URL"   	type="string"/>		
+	<attribute name="telephone" 	type="string"/>
+	<attribute name="username" 	type="string"/>	
+	<attribute name="password" 	type="string"/>
+	<attribute name="realm" 	type="string" />
+	<attribute name="server"  	type="string"/>
+
+	<attribute name="isConnected"   type="boolean"/>	
+
+	<attribute name="myMic"/>
+	<attribute name="incomingNetStream"/>
+	<attribute name="outgoingNetStream"/>
+	<attribute name="source"/>
+	<attribute name="sourceName"/>
+	<attribute name="destination"/>
+	<attribute name="destinationName"/>
+
+	<event name="registrationSucess"/>
+	<event name="registrationFailure"/>
+	<event name="phoneError"/>	
+	<event name="phoneReady"/>		
+	<event name="callIncoming"/>
+	<event name="callConnected"/>	
+	<event name="callState"/>	
+
+	
+
+	<method name="init"><![CDATA[
+		super.init();
+		
+		myMic =  Microphone.get();
+		myMic.setRate(8);
+		
+		isConnected = false;
+		
+		_nc.registrationSucess = function(msg){
+		
+			if (debug) Debug.write("registrationSucess:", msg);
+			registrationSucess.sendEvent(msg);
+		}
+
+		_nc.registrationFailure = function(msg){
+		
+			if (debug) Debug.write("registrationFailure:", msg);
+			registrationFailure.sendEvent(msg);
+		}
+		
+
+		_nc.incoming = function(iSource, iSourceName, iDestination, iDestinationName){
+			source = iSource;
+			sourceName = iSourceName;
+			destination = iDestination;
+			destinationName = iDestinationName;
+			
+			if (debug) Debug.write("callIncoming:", source);
+			callIncoming.sendEvent(source, sourceName, destination, destinationName);
+		}
+		
+		_nc.connected = function(publishName, playName){
+
+
+			incomingNetStream = new NetStream(_nc);
+			outgoingNetStream = new NetStream(_nc);
+
+			outgoingNetStream.attachAudio(myMic);
+
+			incomingNetStream.play(playName); 
+			outgoingNetStream.publish(publishName, "live"); 
+		
+			if (debug) Debug.write("callConnected:", publishName + "->" + playName);
+			callConnected.sendEvent(publishName, playName);
+		}
+		
+
+		_nc.callState = function(msg){
+		
+			if (debug) Debug.write("callState:", msg);
+			
+			if (msg == "onUaCallClosed") {
+
+				if (incomingNetStream != null) {
+					incomingNetStream.play(false); 
+					outgoingNetStream.attachAudio(null);
+					outgoingNetStream.publish(false);
+				
+					incomingNetStream = null;
+					outgoingNetStream = null;
+				}
+			}			
+			
+			callState.sendEvent(msg);
+		}
+
+	
+         ]]>		
+	</method>
+
+	<handler name="onconnect">
+			
+		if (this.username == null || this.password == null) {
+			this.phoneError.sendEvent("phone", "Username or Password not set");
+
+		} else {		
+			_nc.call("login", null, this.telephone, this.username, this.password, this.realm, this.server);
+		}				
+	</handler>    
+
+	<handler name="onstage" args="s">
+		Debug.write("netconnection:", "Status: " + s);	
+
+		if (s == 0) {
+			this.phoneError.sendEvent("netconnection", this.status);
+		}
+		
+		if (s == 2) {
+			this.phoneReady.sendEvent();
+		}		
+	</handler>
+	
+
+	<method name="login" args="telephone, username, password, realm, server, red5URL">
+		this.telephone = telephone;
+		this.username = username;		
+		this.password = password;
+		this.realm = realm;
+		this.server = server;
+		this.src = red5URL;
+		
+		if (this.status == "connected") {
+			if (debug) Debug.write("open: ", "connected, login " + this.username);			
+			_nc.call("login", null, this.telephone, this.username, this.password, this.realm, this.server);
+		} else {
+			if (debug) Debug.write("open: ", "disconnected, connect");
+			this.connect();
+		}
+	</method>
+
+
+	<method name="register">
+		if (debug) Debug.write("register: ", this.server + " " + this.username + " " + this.password);		
+		_nc.call("register", null, this.username);  	
+	</method>
+	
+	
+	<method name="call" args="iDestination">
+		destination = iDestination;
+		source = this.username;
+		sourceName = this.username;
+		destination = iDestination;
+		destinationName = iDestination;
+					
+		if (debug) Debug.write("call: ", "destination - " + destination);
+		_nc.call("call", null, this.username, destination);  	
+	</method>	
+
+	<method name="dtmf" args="chr">
+		if (debug) Debug.write("dtmf: ", "dtmf - " + chr);	
+		_nc.call("dtmf", null, this.username, chr);  	
+	</method>
+
+	<method name="accept">
+		if (debug) Debug.write("accept: ", source);		
+		_nc.call("accept", null, this.username);  	
+	</method>
+	
+	<method name="hangup">
+		if (debug) Debug.write("hangup: ", source);			
+		_nc.call("hangup", null, this.username);  
+		
+		if (incomingNetStream != null) {
+			incomingNetStream.play(false); 
+			outgoingNetStream.attachAudio(null);
+			outgoingNetStream.publish(false);
+				
+			incomingNetStream = null;
+			outgoingNetStream = null;		
+		}
+	</method>
+
+	<method name="config">
+		if (debug) Debug.write("config", "");	
+ 		System.showSettings (0);
+	</method>	
+	
+    </class>
+</library>
+    
+

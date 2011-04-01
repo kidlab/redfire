@@ -1,0 +1,53 @@
+<html>
+<head>
+<title>RedSpark</title>
+<script type="text/javascript" src="swfobject.js"></script>
+<script type="text/javascript">
+
+	var redsparkObj
+
+	function startApp()
+	{
+		redsparkObj = document.getElementById("redspark");
+	}
+
+	function stopApp()
+	{
+		redsparkObj.windowCloseEvent();
+	}
+
+	function getPort()
+	{
+		return window.location.port;
+	}
+
+	function getDomain()
+	{
+		return "btg199251";
+	}
+
+	function getHostname()
+	{
+		return window.location.hostname;
+	}
+
+	function getConnectionType()
+	{
+		return "rtmp"; // tls, http, https, rtmp
+	}
+
+</script>
+
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onLoad="startApp()" onUnload="stopApp()">
+<center>
+<div id="redsparkDIV"></div>
+<script type="text/javascript">
+		fo = new SWFObject("redspark.swf", "redspark", "100%", "100%", "9");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "redspark");
+		fo.write("redsparkDIV");
+</script>
+</center>
+</body>
+</html>

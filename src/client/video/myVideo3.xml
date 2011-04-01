@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<swf version="7" compressed="0">
+  <Header framerate="15" frames="1">
+    <size>
+      <Rectangle left="0" right="3200" top="0" bottom="2400"/>
+    </size>
+    <tags>
+      <SetBackgroundColor>
+        <color>
+          <Color red="255" green="255" blue="255"/>
+        </color>
+      </SetBackgroundColor>
+      <DefineVideoStream objectID="1" frames="0" width="320" height="240" deblocking="0" smoothing="0" codec="0"/>
+      <PlaceObject2 replace="0" depth="1" objectID="1" name="myVideo">
+        <transform>
+          <Transform transX="1" transY="0"/>
+        </transform>
+      </PlaceObject2>
+      <ShowFrame/>
+      <End/>
+    </tags>
+  </Header>
+</swf>

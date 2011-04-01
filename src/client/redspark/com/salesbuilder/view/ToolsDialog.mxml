@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" width="400" height="300"
+	showCloseButton="true" 
+	close="PopUpManager.removePopUp(this)"
+	paddingTop="12" verticalGap="8"
+	title="Tools">
+
+	<mx:Script>
+		<![CDATA[
+
+			import mx.managers.PopUpManager;
+			
+			private function initDB():void
+			{
+
+			}
+			
+			private function toXML():void
+			{
+
+			}
+			
+		]]>
+	</mx:Script>
+
+	<mx:Button label="Export To XML" click="toXML()" width="200"/>
+	<mx:Button label="Initialize Database" click="initDB()" width="200"/>
+	
+</mx:TitleWindow>

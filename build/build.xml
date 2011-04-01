@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="RedfirePlugin" default="war">
+	<description>Redfire Plugin Build</description>
+	<property name="openfire.home" value="D:\Work\Projects\2010.04.21-iTrader\Workspace\openfire_3_6_4\target\openfire" />
+	<!--property name="openfire.home" value="D:\Work\Projects\2010.04.21-iTrader\Workspace\openfire_3_7_0\target\openfire" /-->
+	
+	<property name="RedfirePlugin.dir" value="D:\Work\Projects\2010.04.21-iTrader\Workspace\RedfirePlugin" />
+
+	<path id="build.classpath">
+		<fileset dir="${RedfirePlugin.dir}\plugin\WEB-INF\lib" includes="*.jar"/>
+		<fileset dir="${RedfirePlugin.dir}\plugin\lib" includes="*.jar"/>		
+		<fileset dir="${openfire.home}\lib" includes="openfire.jar"/>
+		<fileset dir="${openfire.home}\lib" includes="servlet.jar"/>
+	</path>
+
+	<target name="init">
+		<!-- create our directories -->
+		<mkdir dir="${RedfirePlugin.dir}\build\classes"/>
+	</target>
+	
+	<target name="clean">
+        <delete dir="${RedfirePlugin.dir}\build\classes\com"/>
+        <delete dir="${RedfirePlugin.dir}\build\classes\local"/>
+        <delete dir="${RedfirePlugin.dir}\build\classes\org"/>        
+        <delete file="${openfire.home}\plugins\redfire.war"/>
+	</target>
+	
+	<target name="compile" depends="init">
+		<javac debug="true" deprecation="true" srcdir="${RedfirePlugin.dir}\src" destdir="${RedfirePlugin.dir}\build\classes">
+			<classpath refid="build.classpath"/>
+		</javac>
+	</target>
+
+	<target name="jar" depends="clean, compile">
+		<jar destfile="${RedfirePlugin.dir}\plugin\lib\redfire.jar">
+			<fileset dir="${RedfirePlugin.dir}\build\classes">
+				<include name="**" />
+			</fileset>
+		</jar>	
+		<jar destfile="${RedfirePlugin.dir}\plugin\WEB-INF\lib\redfire.jar">
+			<fileset dir="${RedfirePlugin.dir}\build\classes">
+				<include name="**" />
+			</fileset>
+		</jar>		
+	</target>
+	
+	<target name="war" depends="jar">
+		<jar destfile="${openfire.home}\plugins\redfire.war">
+			<fileset dir="${RedfirePlugin.dir}\plugin">
+				<include name="**" />
+			</fileset>
+		</jar>
+	</target>
+</project>
+
