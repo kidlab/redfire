@@ -76,4 +76,4 @@ war:
       [jar] Building jar: D:\Work\Projects\2010.04.21-iTrader\Workspace\openfire_3_6_4\target\openfire\plugins\redfire.war
 
 BUILD SUCCESSFUL
-Total time: 21 seconds
+Total time: 50 seconds
