@@ -208,6 +208,11 @@ public abstract class CallHandler extends Thread {
 	return memberReceiver;
     }
 
+    public CallSetupAgent getCallSetupAgent()
+    {
+		return csa;
+	}
+
     /*
      * This method is called by a CallSetupAgent once the endpoint
      * address is known.  The endpoint address is the address from which

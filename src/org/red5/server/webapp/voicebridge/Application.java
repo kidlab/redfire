@@ -17,9 +17,6 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.red5.logging.Red5LoggerFactory;
-
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IClient;
 import org.red5.server.api.IConnection;
@@ -45,22 +42,32 @@ import org.jivesoftware.openfire.auth.UnauthorizedException;
 import org.jivesoftware.openfire.auth.AuthToken;
 import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.openfire.SessionPacketRouter;
+import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.database.SequenceManager;
+
+import org.jivesoftware.openfire.component.InternalComponentManager;
+
+import org.xmpp.packet.*;
+
+import org.dom4j.*;
+
+import com.ifsoft.iftalk.plugin.voicebridge.*;
+
+
 
 public class Application extends MultiThreadedApplicationAdapter implements IStreamAwareScopeHandler, CallEventListener  {
 
-    protected static Logger log = Red5LoggerFactory.getLogger( Application.class, "voicebridge" );
-	private String version = "0.0.0.1";
+ 	private String version = "0.0.0.1";
 	private Config config;
 
-	private Map< String, Object > callObjects = new ConcurrentHashMap< String, Object >();
-	private Map< String, CallParticipant > callPartipants = new ConcurrentHashMap< String, CallParticipant >();
-    private Map< String, LocalClientSession > sessions = new ConcurrentHashMap<String, LocalClientSession>();
+	private static Site site;
+	private static VoiceBridgeComponent component;
+	private static Map< String, BridgeParticipant > bridgeParticipants 	= new ConcurrentHashMap< String, BridgeParticipant >();
 
-    private static ArrayList<ConferenceMonitor> conferenceMonitors = new ArrayList<ConferenceMonitor>();
-    private static ArrayList<IServiceCapableConnection> incomingCallListeners = new ArrayList<IServiceCapableConnection>();
-    private static ArrayList<IServiceCapableConnection> outgoingCallListeners = new ArrayList<IServiceCapableConnection>();
+    private Map< String, LocalClientSession > sessions 				= new ConcurrentHashMap<String, LocalClientSession>();
+    private Map< String, IServiceCapableConnection > publishers 	= new ConcurrentHashMap<String, IServiceCapableConnection>();
 
-    private Map< String, IServiceCapableConnection > publishers = new ConcurrentHashMap<String, IServiceCapableConnection>();
+
 
     // ------------------------------------------------------------------------
     //
@@ -68,14 +75,37 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
     //
     // ------------------------------------------------------------------------
 
-    @Override
-    public boolean appStart( IScope scope ) {
 
+    @Override
+    public boolean appStart( IScope scope )
+    {
 		try{
 			loginfo( "Red5XMPP starting in scope " + scope.getName() + " " + System.getProperty( "user.dir" ) );
 			loginfo(String.format("Red5XMPP version %s", version));
 
+			SiteDao siteDao = new SiteDao(null);
+			ArrayList<Site> sites = (ArrayList) siteDao.getSites();
+
+			if (sites.size() == 0)
+			{
+				String hostName =  XMPPServer.getInstance().getServerInfo().getHostname();
+
+				Site site = new Site();
+				site.setSiteID(SequenceManager.nextID(site));
+				site.setName(hostName);
+				site.setPrivateHost(hostName);
+				site.setPublicHost(hostName);
+				site.setDefaultProxy("");
+				site.setDefaultExten("");
+
+				siteDao.insert(site);
+				sites = (ArrayList) siteDao.getSites();
+			}
+
+			site = sites.get(0);
+
 			config = Config.getInstance();
+			config.initialise(site);
 
 			String appPath = System.getProperty("user.dir");
 			//String logDir = appPath + File.separator + "log" + File.separator;
@@ -101,8 +131,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			Bridge.setPublicHost(config.getPublicHost());
 			Bridge.setPrivateHost(config.getPrivateHost());
-			Bridge.setBridgeLocation("LCL");
-
+			Bridge.setBridgeLocation("VB" + site.getSiteID());
 
 			new SipServer(config, properties);
 
@@ -122,45 +151,8 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		IConnection conn = Red5.getConnectionLocal();
 		IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-		synchronized (incomingCallListeners)
-		{
-			boolean removeIncomingCallHandler = false;
-
-			for (IServiceCapableConnection theService : incomingCallListeners)
-			{
-				if (theService == service) {
-					removeIncomingCallHandler = true;
-				}
-			}
-
-			if (removeIncomingCallHandler)
-			{
-				monitorIncomingCalls(false);
-			}
-
-			monitorOutgoingCalls(false);
-		}
-
-		synchronized(conferenceMonitors)
-		{
-			ArrayList<ConferenceMonitor> monitorsToRemove = new ArrayList<ConferenceMonitor>();
-
-			for (ConferenceMonitor m : conferenceMonitors)
-			{
-				if (service == m.getService())
-				{
-					monitorsToRemove.add(m);
-				}
-			}
-
-			for (ConferenceMonitor m : monitorsToRemove)
-			{
-				loginfo("Removing conference monitor for " + m.getConferenceId());
-				conferenceMonitors.remove(m);
-			}
-		}
-
 		CallHandler.shutdown();
+		config.terminate();
     }
 
 
@@ -218,6 +210,8 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
     // XMPP
     //
     // ------------------------------------------------------------------------
+
+
 
     public boolean xmppConnect(String username, String password, String resource)
     {
@@ -392,204 +386,216 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
     // ------------------------------------------------------------------------
 
 
-    public void callEventNotification(CallEvent callEvent)
+	private void connectToMUC(final BridgeParticipant bp)
+	{
+		final JID jid = bp.participantJID;
+		final CallParticipant cp = bp.callParticipant;
+
+    	loginfo("VoiceBridge connectToMUC " + jid + " " + cp.getConferenceId() + " " + cp.getCallId());
+
+		final String conferenceId = cp.getConferenceId();
+
+		Message message = new Message();
+		message.setFrom(jid);
+		message.setTo(jid);
+		Element invite = message.addChildElement("x", "jabber:x:conference");
+		invite.addAttribute("jid", conferenceId + "@conference." + getComponent().getDomain());
+		getComponent().sendPacket(message);
+
+		loginfo("VoiceBridge connectToMUC outgoing message \n" + message);
+	}
+
+
+	private void disconnectFromMUC(BridgeParticipant bp)
+	{
+		JID jid = bp.participantJID;
+		CallParticipant cp = bp.callParticipant;
+
+    	loginfo("VoiceBridge disconnectFromMUC " + jid + " " + cp.getConferenceId() + " " + cp.getCallId());
+
+		String conferenceId = cp.getConferenceId();
+
+		// <presence type="unavailable" to="1111@conference.btg199251/Kimme"/>
+
+		Presence presence = new Presence(Presence.Type.unavailable);
+		presence.setTo(conferenceId + "@conference." + getComponent().getDomain() + "/" + jid.getNode());
+        presence.addChildElement("x", "http://jabber.org/protocol/muc");
+		presence.setFrom(jid);
+
+		getComponent().sendPacket(presence);
+
+		loginfo("VoiceBridge disconnectFromMUC outgoing presence \n" + presence);
+	}
+
+    public String manageCallParticipant(JID userJID, String uid, String parameter, String value)
     {
- 		loginfo( "Red5XMPP callEventNotification " + callEvent.toString());
+		String response = null;
 
-		if (conferenceMonitors.size() > 0)
-		{
-			notifyConferenceMonitors(callEvent);
-		}
+		try {
+			loginfo("VoiceBridge manageParticipant");
 
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
+			if ( bridgeParticipants.containsKey(uid) == false)
+			{
+				CallParticipant cp = new CallParticipant();
+				cp.setCallId(uid);
 
-		Application.reportCallEventNotification(service, callEvent, "monitorCallStatus");
-    }
+				BridgeParticipant bp = new BridgeParticipant();
+				bp.userJID = userJID;
+				bp.callParticipant = cp;
 
-
-    public static void reportCallEventNotification(IServiceCapableConnection service, CallEvent callEvent, String monitorName)
-    {
-		if ( service != null )
-		{
-			String myEvent = CallEvent.getEventString(callEvent.getEvent());
-			String callState = callEvent.getCallState().toString();
-
-			String info = callEvent.getInfo() == null ? "" : callEvent.getInfo();
-			String dtmf = callEvent.getDtmfKey() == null ? "" : callEvent.getDtmfKey();
-			String treatmentdId = callEvent.getTreatmentId() == null ? "" : callEvent.getTreatmentId();
-			int noOfCalls = callEvent.getNumberOfCalls();
-			String callId = callEvent.getCallId() == null ? "" : callEvent.getCallId();
-			String confId = callEvent.getConferenceId() == null ? "" : callEvent.getConferenceId();
-			String callInfo = callEvent.getCallInfo() == null ? "" : callEvent.getCallInfo();
-
-			service.invoke("callsEventNotification", new Object[] {monitorName, myEvent, callState, info, dtmf, treatmentdId, String.valueOf(noOfCalls), callId, confId, callInfo });
- 		}
-    }
-
-    public void manageCallParticipant(String uid, String parameter, String value)
-    {
-    	loginfo("Red5XMPP manageParticipant");
-
-        if ( callPartipants.containsKey(uid) )
-        {
-			CallParticipant cp = callPartipants.get(uid);
-
-			try {
-
-				if ("destroy".equalsIgnoreCase(parameter))
-				{
-					cp = callPartipants.remove(uid);
-					cp = null;
-
-					Object obj = callObjects.remove(uid);
-					obj = null;
-
-					reportInfo("Call Participant " + uid + " destroyed");
-
-				} else {
-
-					parseCallParameters(parameter, value, cp, uid);
-					reportInfo("manageCallParticipant processing " + parameter + " value: " + value);
-
-				}
-
-			} catch (Exception e) {
-
-				reportError(e.toString());
+				bridgeParticipants.put(uid, bp);
 			}
 
-		} else {
+			response = parseCallParameters(parameter, value, bridgeParticipants.get(uid), uid);
 
-			if ("create".equalsIgnoreCase(parameter))
+			if ("CancelCall".equalsIgnoreCase(parameter))
 			{
-				callPartipants.put(uid, new CallParticipant());
-				reportInfo("Call Participant " + uid + " created");
+				try {
+					BridgeParticipant bp = bridgeParticipants.remove(uid);
+					CallParticipant cp = bp.callParticipant;
 
-			} else {
+					if (bp.participantJID != null)
+					{
+						disconnectFromMUC(bp);
+					}
 
-				reportError("Call Participant " + uid + " does not exist");
+					bp = null;
+
+				} catch (Exception e) {
+
+					response = e.toString();
+				}
+			}
+
+		} catch (Exception e) {
+
+			response = (e.toString());
+		}
+
+		return response;
+	}
+
+
+	public void handlePostBridge(List<String> uids)
+	{
+		for (String uid : uids)
+		{
+    		loginfo("VoiceBridge handlePostBridge " + uid);
+
+			BridgeParticipant bp = bridgeParticipants.get(uid);
+
+			if (bp.participantJID != null)
+			{
+				CallParticipant cp = bp.callParticipant;
+
+
 			}
 		}
 	}
 
-    public void manageVoiceBridge(String parameter, String value)
+
+    public String manageVoiceBridge(String parameter, String value)
     {
-    	loginfo("Red5XMPP manageConference");
+		String response = null;
+    	loginfo("VoiceBridge manageConference");
 
 		try {
 
 			parseBridgeParameters(parameter, value);
-			reportInfo("manageVoiceBridge processing " + parameter + " value: " + value);
 
 		} catch (Exception e) {
 
-			reportError(e.toString());
+			response = (e.toString());
 		}
+		return response;
 	}
 
-    private void makeOutgoingCall(CallParticipant cp, String uid)
+
+    private String makeOutgoingCall(BridgeParticipant bp, String uid)
     {
-    	loginfo("Red5XMPP makeOutgoingCall");
+		CallParticipant cp = bp.callParticipant;
+
+		String response = null;
+    	loginfo("VoiceBridge makeOutgoingCall " + uid + " " + cp.getCallId() + " " + bp.participantJID);
 
 		try {
 
-			if (validateAndAdjustParameters(cp))
+			response = validateAndAdjustParameters(bp);
+
+			if (response == null)
 			{
 				if (cp.getSecondPartyNumber() == null)
 				{
-					OutgoingCallHandler outgoingCallHandler = new OutgoingCallHandler(this, cp);
-					outgoingCallHandler.start();
+					if (cp.getPhoneNumber() != null)
+					{
+						OutgoingCallHandler outgoingCallHandler = new OutgoingCallHandler(this, cp);
+						outgoingCallHandler.start();
 
-					callObjects.put(uid, outgoingCallHandler);
+						bp.callHandler = outgoingCallHandler;
+					}
 
-					reportInfo("Outgoing call made to " + cp.getPhoneNumber() + " id: " + cp.getCallId());
+					if (bp.participantJID != null)
+					{
+						connectToMUC(bp);
+					}
 
 				} else {
 
 					TwoPartyCallHandler twoPartyCallHandler = new TwoPartyCallHandler(this, cp);
 					twoPartyCallHandler.start();
 
-					callObjects.put(uid, twoPartyCallHandler);
-
-					reportInfo("Two party call made to " + cp.getPhoneNumber() + " id: " + cp.getCallId());
+					bp.callHandler = twoPartyCallHandler;
 				}
+
 			}
 
 		} catch (Exception e) {
 
-			reportError(e.toString());
+			response = (e.toString());
 		}
+
+		return response;
 	}
 
-    private void migrateCall(CallParticipant cp)
+    private String migrateCall(BridgeParticipant bp)
     {
-    	loginfo("Red5XMPP migrateCall");
+		CallParticipant cp = bp.callParticipant;
+		String response = null;
+    	loginfo("VoiceBridge migrateCall");
 
 		try {
 
-			if (validateAndAdjustParameters(cp))
+			response = validateAndAdjustParameters(bp);
+
+			if (response == null)
 			{
 				if (cp.migrateCall())
 				{
 					new CallMigrator(this, cp).start();
 
-					reportInfo("Call migrated to " + cp.getSecondPartyNumber() + " id: " + cp.getCallId());
-
 				} else {
 
-					reportError("Call participant is not configured for migration");
+					response = ("Call participant is not configured for migration");
 				}
 			}
 
 		} catch (Exception e) {
 
-			reportError(e.toString());
-		}
-	}
-
-	private void reportError(String error)
-	{
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
-
-		if ( service != null ) {
-			( service ).invoke( "errorEventNotification", new Object[] { error } );
+			response = (e.toString());
 		}
 
-		logerror("Red5XMPP " + error);
+		return response;
 	}
 
-	private void reportInfo(String info)
-	{
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-		if ( service != null ) {
-			( service ).invoke( "infoEventNotification", new Object[] { info } );
-		}
-	}
-
-    private void loginfo( String s ) {
-
-        log.info( s );
-        System.out.println( s );
-    }
-
-    private void logerror( String s ) {
-
-        log.error( s );
-        System.out.println( "[ERROR] " + s );
-    }
-
-    private void parseBridgeParameters(String parameter, String value)
+   private void parseBridgeParameters(String parameter, String value)
     {
 		if ("nAvg".equalsIgnoreCase(parameter))
 		{
 			try {
 				LowPassFilter.setNAvg(getInteger(value));
 			} catch (Exception e) {
-				reportError("parseBridgeParameters : nAvg " + value + " is not numeric" );
+				logerror("parseBridgeParameters : nAvg " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -599,7 +605,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				LowPassFilter.setLpfVolumeAdjustment(getDouble(value));
 			} catch (Exception e) {
-				reportError("parseBridgeParameters : lpfv " + value + " is not numeric" );
+				logerror("parseBridgeParameters : lpfv " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -609,7 +615,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				SipTPCCallAgent.forceGatewayError(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -620,7 +626,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (tokens.length != 2)
 			{
-				reportError("You must specify both a whisperGroupId and a callId");
+				logerror("You must specify both a whisperGroupId and a callId");
 				return;
 			}
 
@@ -631,14 +637,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (callHandler == null)
 			{
-				reportError("Invalid callId:  " + callId);
+				logerror("Invalid callId:  " + callId);
 				return;
 			}
 
 			try {
 				callHandler.getMember().addCall(whisperGroupId);
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -649,7 +655,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceManager.setAllowShortNames(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -677,7 +683,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				CallHandler.setCnThresh(getQualifierString(value), getInteger(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
             return;
 		}
@@ -687,7 +693,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				MemberSender.setComfortNoiseType(getInteger(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
             return;
 		}
@@ -697,7 +703,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				RtpPacket.setDefaultComfortNoiseLevel((byte) getInteger(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
             return;
 		}
@@ -707,20 +713,20 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				WhisperGroup.setCommonMixDefault(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
 
 		if ("conferenceInfoShort".equalsIgnoreCase(parameter))
 		{
-			reportInfo(ConferenceManager.getAbbreviatedConferenceInfo());
+			loginfo(ConferenceManager.getAbbreviatedConferenceInfo());
 			return;
 		}
 
 		if ("conferenceInfo".equalsIgnoreCase(parameter))
 		{
-			reportInfo(ConferenceManager.getDetailedConferenceInfo());
+			loginfo(ConferenceManager.getDetailedConferenceInfo());
 			return;
 		}
 
@@ -730,7 +736,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (tokens.length < 2)
 			{
-				reportError("Missing parameters");
+				logerror("Missing parameters");
 				return;
 			}
 
@@ -738,7 +744,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (tokens[1].indexOf("PCM") != 0 && tokens[1].indexOf("SPEEX") != 0)
 			{
-				reportError("invalid media specification");
+				logerror("invalid media specification");
 				return;
 			}
 
@@ -754,7 +760,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceManager.createConference(conferenceId, mediaPreference, displayName);
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -766,7 +772,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (tokens.length < 2)
 			{
-				reportError("You must specify both a conferenceId and a whisperGroupId");
+				logerror("You must specify both a conferenceId and a whisperGroupId");
 				return;
 			}
 
@@ -785,7 +791,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			} catch (ParseException e) {
 
-				reportError("Can't create Whisper group " + tokens[1] + " " + e.getMessage());
+				logerror("Can't create Whisper group " + tokens[1] + " " + e.getMessage());
 			}
 			return;
 		}
@@ -795,7 +801,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				MemberReceiver.deferMixing(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -806,14 +812,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (tokens.length != 2)
 			{
-				reportError("You must specify both a conferenceId and a whisperGroupId");
+				logerror("You must specify both a conferenceId and a whisperGroupId");
 				return;
 			}
 
 			try {
 				ConferenceManager.destroyWhisperGroup(tokens[0], tokens[1]);
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -824,7 +830,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				CallSetupAgent.setDefaultCallAnswerTimeout(getInteger(value));
 			} catch (Exception e) {
-				reportError("callAnswerTimeout " + value + " is not numeric" );
+				logerror("callAnswerTimeout " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -837,7 +843,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -846,11 +852,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					CallHandler.setDoNotRecord(callId, booleanValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -864,7 +870,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -873,11 +879,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					CallHandler.setDtmfSuppression(callId, booleanValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -891,7 +897,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -900,11 +906,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					CallHandler.setDropPackets(callId, integerValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -915,7 +921,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				CallHandler.setDuplicateCallLimit(getInteger(value));
 			} catch (Exception e) {
-				reportError("duplicateCallLimit " + value + " is not numeric" );
+				logerror("duplicateCallLimit " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -926,14 +932,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				IncomingCallHandler.setDirectConferencing(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
 
 		if ("distributedConferenceInfo".equalsIgnoreCase(parameter))
 		{
-			reportInfo(ConferenceManager.getDistributedConferenceInfo());
+			loginfo(ConferenceManager.getDistributedConferenceInfo());
 			return;
 		}
 
@@ -948,7 +954,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				CallHandler.enablePSTNCalls(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -959,7 +965,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				ConferenceManager.endConference(value);
 
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -969,7 +975,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceMember.setFirstRtpPort(getInteger(value));
 			} catch (Exception e) {
-				reportError("firstRtpPort " + value + " is not numeric" );
+				logerror("firstRtpPort " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -979,7 +985,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				MixManager.setForcePrivateMix(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -991,7 +997,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length < 2)
 				{
-					reportError("Missing parameters:  " + value);
+					logerror("Missing parameters:  " + value);
 					return;
 				}
 
@@ -999,7 +1005,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (dest == null)
 				{
-					reportError("Invalid callId:  " + tokens[0]);
+					logerror("Invalid callId:  " + tokens[0]);
 					return;
 				}
 
@@ -1007,14 +1013,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (src == null)
 				{
-					reportError("Invalid callId:  " + tokens[1]);
+					logerror("Invalid callId:  " + tokens[1]);
 					return;
 				}
 
 				src.getMember().getMemberReceiver().addForwardMember(dest.getMember().getMemberSender());
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1025,7 +1031,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				MemberReceiver.setForwardDtmfKeys(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1038,7 +1044,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 		if ("gcs".equalsIgnoreCase(parameter))
 		{
-			reportInfo(CallHandler.getCallStateForAllCalls());
+			loginfo(CallHandler.getCallStateForAllCalls());
 			return;
 		}
 
@@ -1050,18 +1056,18 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (callHandler == null)
 			{
-				reportError("Invalid callId:  " + callId);
+				logerror("Invalid callId:  " + callId);
 				return;
 			}
 
-			reportInfo(callHandler.getCallState());
+			loginfo(callHandler.getCallState());
 
 			return;
 		}
 
 		if ("getAllAbbreviatedMixDescriptors".equalsIgnoreCase(parameter))
 		{
-			reportInfo(CallHandler.getAllAbbreviatedMixDescriptors());
+			loginfo(CallHandler.getAllAbbreviatedMixDescriptors());
 			return;
 		}
 
@@ -1073,17 +1079,17 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (callHandler == null)
 			{
-				reportError("Invalid callId:  " + callId);
+				logerror("Invalid callId:  " + callId);
 				return;
 			}
 
-	        reportInfo(callHandler.getMember().getAbbreviatedMixDescriptors());
+	        loginfo(callHandler.getMember().getAbbreviatedMixDescriptors());
 			return;
 		}
 
 		if ("getAllMixDescriptors".equalsIgnoreCase(parameter))
 		{
-			reportInfo(CallHandler.getAllMixDescriptors());
+			loginfo(CallHandler.getAllMixDescriptors());
 			return;
 		}
 
@@ -1095,21 +1101,18 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (callHandler == null)
 			{
-				reportError("Invalid callId:  " + callId);
+				logerror("Invalid callId:  " + callId);
 				return;
 			}
 
-	        reportInfo(callHandler.getMember().getMixDescriptors());
+	        loginfo(callHandler.getMember().getMixDescriptors());
 			return;
 		}
 
 		if ("getStatistics".equalsIgnoreCase(parameter))
 		{
-			IConnection conn = Red5.getConnectionLocal();
-			IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-			if ( service != null )
-			{
+/*
 				(  service ).invoke( "statisticsNotification", new Object[] { String.valueOf(ConferenceManager.getNumberOfConferences()),
 																			  String.valueOf(ConferenceManager.getTotalMembers()),
 																			  String.valueOf(CallHandler.getTotalSpeaking()),
@@ -1118,12 +1121,13 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 																			  String.valueOf(Math.round(ConferenceSender.getMaxSendTime() * 10000) / 10000.)
 
 																			});
-			}
+*/
+
 		}
 
 		if ("getBriefConferenceInfo".equalsIgnoreCase(parameter))
 		{
-			reportInfo(ConferenceManager.getBriefConferenceInfo());
+			loginfo(ConferenceManager.getBriefConferenceInfo());
 			return;
 		}
 
@@ -1144,7 +1148,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				IncomingCallHandler.setIncomingCallVoiceDetection(getBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1165,7 +1169,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				config.setInternalExtenLength(getInteger(value));
 			} catch (Exception e) {
-				reportError("internalExtenLength " + value + " is not numeric" );
+				logerror("internalExtenLength " + value + " is not numeric" );
 			}
 		}
 
@@ -1176,14 +1180,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 2)
 				{
-				   reportError("conferenceJoinTreatment requires two inputs");
+				   logerror("conferenceJoinTreatment requires two inputs");
 				   return;
 				}
 
 				ConferenceManager.setConferenceJoinTreatment(tokens[1], tokens[0]);
 
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1195,14 +1199,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 2)
 				{
-				   reportError("conferenceLeaveTreatment requires two inputs");
+				   logerror("conferenceLeaveTreatment requires two inputs");
 				   return;
 				}
 
 				ConferenceManager.setConferenceLeaveTreatment(tokens[1], tokens[0]);
 
 			} catch (ParseException e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1213,7 +1217,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceMember.setLastRtpPort(getInteger(value));
 			} catch (Exception e) {
-				reportError("lastRtpPort " + value + " is not numeric" );
+				logerror("lastRtpPort " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -1224,7 +1228,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceManager.setLoneReceiverPort(getInteger(value));
 			} catch (Exception e) {
-				reportError("loneReceiverPort " + value + " is not numeric" );
+				logerror("loneReceiverPort " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -1247,7 +1251,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 3)
 				{
-				   reportError("migrateToBridge requires three inputs");
+				   logerror("migrateToBridge requires three inputs");
 				   return;
 				}
 
@@ -1259,7 +1263,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callHandler == null)
 				{
-					reportError("Invalid callId: " + callId);
+					logerror("Invalid callId: " + callId);
 					return;
 				}
 
@@ -1279,7 +1283,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				} catch (NumberFormatException e) {
 
-					reportError("Invalid bridge server port:  " + port);
+					logerror("Invalid bridge server port:  " + port);
 					return;
 				}
 
@@ -1287,7 +1291,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					bridgeConnector = new BridgeConnector(bridge, serverPort, 5000);
 
 				} catch (IOException e) {
-					reportError("Unable to connect to bridge " + bridge	+ " " + e.getMessage());
+					logerror("Unable to connect to bridge " + bridge	+ " " + e.getMessage());
 					return;
 				}
 
@@ -1300,7 +1304,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				} catch (IOException e) {
 
-					reportError("Unable to send command to bridge:  " + e.getMessage());
+					logerror("Unable to send command to bridge:  " + e.getMessage());
 					return;
 				}
 
@@ -1310,7 +1314,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				//TODO convert to RTMP or Openlink
 */
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1320,7 +1324,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceSender.setSenderThreads(getInteger(value));
 			} catch (Exception e) {
-				reportError("senderThreads " + value + " is not numeric" );
+				logerror("senderThreads " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -1332,7 +1336,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 2)
 				{
-				   reportError("minJitterBufferSize requires two inputs");
+				   logerror("minJitterBufferSize requires two inputs");
 				   return;
 				}
 
@@ -1341,14 +1345,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callHandler == null)
 				{
-					reportError("Invalid callId:  " + tokens[1]);
+					logerror("Invalid callId:  " + tokens[1]);
 					return;
 				}
 
 				callHandler.getMember().getMemberReceiver().setMinJitterBufferSize(minJitterBufferSize);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1360,7 +1364,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 2)
 				{
-				   reportError("maxJitterBufferSize requires two inputs");
+				   logerror("maxJitterBufferSize requires two inputs");
 				   return;
 				}
 
@@ -1369,14 +1373,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callHandler == null)
 				{
-					reportError("Invalid callId:  " + tokens[1]);
+					logerror("Invalid callId:  " + tokens[1]);
 					return;
 				}
 
 				callHandler.getMember().getMemberReceiver().setMaxJitterBufferSize(minJitterBufferSize);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1389,7 +1393,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1398,7 +1402,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
@@ -1412,67 +1416,16 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					}
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
 		}
 
-		if ("monitorConferenceStatus".equalsIgnoreCase(parameter))
-		{
-			try {
-				boolean booleanValue = getBoolean(value);
-				String conferenceId = getQualifierString(value);
-
-				if (conferenceId == null)
-				{
-					reportError("conferenceId id is missing");
-					return;
-				}
-
-				monitorConferenceStatus(conferenceId, booleanValue);
-
-			} catch (Exception e) {
-				reportError(e.toString());
-			}
-
-			return;
-		}
-
-		if ("monitorIncomingCalls".equalsIgnoreCase(parameter))
-		{
-			try {
-				boolean booleanValue = getBoolean(value);
-
-				if (monitorIncomingCalls(booleanValue) == false)
-				{
-					reportInfo("There is already an incoming call monitor!");
-					return;
-				}
-
-			} catch (Exception e) {
-				reportError(e.toString());
-			}
-
-			return;
-		}
-
-		if ("monitorOutgoingCalls".equalsIgnoreCase(parameter))
-		{
-			try {
-				boolean booleanValue = getBoolean(value);
-				monitorOutgoingCalls(booleanValue);
-
-			} catch (Exception e) {
-				reportError(e.toString());
-			}
-
-			return;
-		}
 
 		if ("muteCall".equalsIgnoreCase(parameter))
 		{
@@ -1482,7 +1435,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1491,18 +1444,18 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
 	    			CallHandler.setMuted(callId, booleanValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -1516,7 +1469,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1525,18 +1478,18 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
 	    			CallHandler.setMuteWhisperGroup(callId, booleanValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -1550,7 +1503,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1559,18 +1512,18 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
 	    			CallHandler.setConferenceMuted(callId, booleanValue);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -1583,7 +1536,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (tokens.length != 1)
 				{
-					reportError("You must specify a conference id");
+					logerror("You must specify a conference id");
 					return;
 				}
 
@@ -1592,7 +1545,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				callEventNotification(event);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1613,7 +1566,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				ConferenceReceiver.setReceiverPause(getInteger(value));
 			} catch (Exception e) {
-				reportError("pause " + value + " is not numeric" );
+				logerror("pause " + value + " is not numeric" );
 			}
 			return;
 		}
@@ -1627,7 +1580,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callHandler == null)
 				{
-					reportError("Invalid callId:  " + tokens[0]);
+					logerror("Invalid callId:  " + tokens[0]);
 					return;
 				}
 
@@ -1641,7 +1594,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
            	 	callHandler.getMember().pauseTreatment(treatmentId, true);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1655,14 +1608,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (conferenceId == null)
 				{
-					reportError("conferenceId must be specified:  " + value);
+					logerror("conferenceId must be specified:  " + value);
 					return;
 				}
 
             	ConferenceManager.pauseTreatment(conferenceId, treatment, true);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1678,7 +1631,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("callId must be specified:  " + value);
+					logerror("callId must be specified:  " + value);
 					return;
 				}
 
@@ -1686,16 +1639,16 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					CallHandler.playTreatmentToCall(callId, treatment);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 					return;
 
 				} catch (IOException e) {
-					reportError("Unable to read treatment file " + treatment + " " + e.getMessage());
+					logerror("Unable to read treatment file " + treatment + " " + e.getMessage());
 					return;
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1711,7 +1664,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (conferenceId == null)
 				{
-					reportError("conference Id must be specified:  " + value);
+					logerror("conference Id must be specified:  " + value);
 					return;
 				}
 
@@ -1719,12 +1672,12 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					 ConferenceManager.playTreatment(conferenceId, treatment);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid conference Id specified:  " + value);
+					logerror("Invalid conference Id specified:  " + value);
 					return;
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1740,12 +1693,12 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					 ConferenceManager.playTreatmentToAllConferences(treatment);
 
 				} catch (Exception e) {
-					reportError("Error playing treatment :  " + value);
+					logerror("Error playing treatment :  " + value);
 					return;
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 			return;
 		}
@@ -1757,7 +1710,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1766,7 +1719,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
@@ -1774,11 +1727,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					IncomingCallHandler.transferCall(callId, conferenceId);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -1791,7 +1744,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 				if (callId == null)
 				{
-					reportError("Call id is missing");
+					logerror("Call id is missing");
 					return;
 				}
 
@@ -1800,7 +1753,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 					if (callHandler == null)
 					{
-						reportError("No such callId:  " + callId);
+						logerror("No such callId:  " + callId);
 						return;
 					}
 
@@ -1808,11 +1761,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 					callHandler.dtmfKeys(dtmfKey);
 
 				} catch (NoSuchElementException e) {
-					reportError("Invalid callId specified:  " + value);
+					logerror("Invalid callId specified:  " + value);
 				}
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				logerror(e.toString());
 			}
 
 			return;
@@ -1820,63 +1773,131 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 	}
 
 
-    private void parseCallParameters(String parameter, String value, CallParticipant cp, String uid)
+    private String parseCallParameters(String parameter, String value, BridgeParticipant bp, String uid)
     {
-		if ("makeCall".equalsIgnoreCase(parameter))
+		CallParticipant cp = bp.callParticipant;
+		String response = null;
+
+		if ("SetJID".equalsIgnoreCase(parameter))
 		{
 			try {
-				makeOutgoingCall(cp, uid);
+				bp.participantJID = new JID(value);
+
 			} catch (Exception e) {
-				reportError(e.toString());
+				response = e.toString();
 			}
-			return;
+
+			return response;
+		}
+
+		if ("Set2ndPartyJID".equalsIgnoreCase(parameter))
+		{
+			try {
+				bp.secondPartyJID = new JID(value);
+
+			} catch (Exception e) {
+				response = e.toString();
+			}
+
+			return response;
+		}
+
+		if ("SetRtmpVideoStream".equalsIgnoreCase(parameter))
+		{
+			try {
+				cp.setRtmpVideoStream(value);
+
+			} catch (Exception e) {
+				response = e.toString();
+			}
+
+			return response;
+		}
+
+		if ("SetEmailAddress".equalsIgnoreCase(parameter))
+		{
+			try {
+				cp.setEmailAddress(value);
+
+			} catch (Exception e) {
+				response = e.toString();
+			}
+
+			return response;
+		}
+
+		if ("MakeCall".equalsIgnoreCase(parameter))
+		{
+			try {
+				makeOutgoingCall(bp, uid);
+			} catch (Exception e) {
+				logerror(e.toString());
+			}
+			return response;
 		}
 
 		if ("migrateCall".equalsIgnoreCase(parameter))
 		{
 			try {
-				migrateCall(cp);
+				migrateCall(bp);
 			} catch (Exception e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("cancelCall".equalsIgnoreCase(parameter))
 		{
 			CallHandler.hangup(cp.getCallId(), "User requested call termination");
-			return;
+			return response;
 		}
 
-		if ("sendDtmfKey".equalsIgnoreCase(parameter))
+		if ("sendDtmf".equalsIgnoreCase(parameter))
 		{
 			try {
 				CallHandler callHandler = CallHandler.findCall(cp.getCallId());
 				callHandler.dtmfKeys(value);
 
 			} catch (NoSuchElementException e) {
-				reportError("Invalid callId specified:  " + value);
+				response = ("Invalid callId specified:  " + value);
 			}
 
-			return;
+			return response;
 		}
+
+		if ("transferCall".equalsIgnoreCase(parameter))
+		{
+			try {
+				IncomingCallHandler.transferCall(cp.getCallId(), value);
+
+			} catch (NoSuchElementException e) {
+				response = ("Invalid callId specified:  " + value);
+
+			} catch (Exception e) {
+				response = ("Internal error:  " + e);
+
+			}
+
+			return response;
+		}
+
 
 		if ("conferenceJoinTreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setConferenceJoinTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("conferenceLeaveTreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setConferenceLeaveTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("callAnsweredTreatment".equalsIgnoreCase(parameter))
 		{
 			 cp.setCallAnsweredTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("callanswertimeout".equalsIgnoreCase(parameter))
@@ -1884,9 +1905,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setCallAnswerTimeout(getInteger(value));
 			} catch (Exception e) {
-				reportError("callAnswerTimeout " + value + " is not numeric" );
+				response = ("callAnswerTimeout " + value + " is not numeric" );
 			}
-			return;
+			return response;
 		}
 
 		if ("calltimeout".equalsIgnoreCase(parameter))
@@ -1894,30 +1915,30 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setCallTimeout(getInteger(value) * 1000);
 			} catch (Exception e) {
-				reportError("callTimeout " + value + " is not numeric" );
+				response = ("callTimeout " + value + " is not numeric" );
 			}
-			return;
+			return response;
 		}
 
 		if ("callendtreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setCallEndTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("callestablishedtreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setCallEstablishedTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("callid".equalsIgnoreCase(parameter))
 		{
 			cp.setCallId(value);
-			return;
+			return response;
 		}
 
-		if ("conferenceid".equalsIgnoreCase(parameter))
+		if ("SetConference".equalsIgnoreCase(parameter))
 		{
 			try {
 				String[] tokens = value.split(":");
@@ -1933,15 +1954,15 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				}
 
 			} catch (Exception e) {
-				reportError("conferenceId " + value + " is invalid" );
+				response = ("conferenceId " + value + " is invalid" );
 			}
-			return;
+			return response;
 		}
 
 		if ("displayname".equalsIgnoreCase(parameter))
 		{
 			cp.setDisplayName(value);
-			return;
+			return response;
 		}
 
 		if ("distributedbridge".equalsIgnoreCase(parameter))
@@ -1949,9 +1970,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setDistributedBridge(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("donotrecord".equalsIgnoreCase(parameter))
@@ -1959,9 +1980,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setDoNotRecord(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("dtmfdetection".equalsIgnoreCase(parameter))
@@ -1969,9 +1990,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setDtmfDetection(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("dtmfsuppression".equalsIgnoreCase(parameter))
@@ -1979,15 +2000,15 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setDtmfSuppression(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("forwarddatafrom".equalsIgnoreCase(parameter))
 		{
 			cp.setForwardingCallId(value);
-			return;
+			return response;
 		}
 
 		if ("ignoretelephoneevents".equalsIgnoreCase(parameter))
@@ -1995,33 +2016,33 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setIgnoreTelephoneEvents(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("inputtreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setInputTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("encryptkey".equalsIgnoreCase(parameter))
 		{
 			cp.setEncryptionKey(value);
-			return;
+			return response;
 		}
 
 		if ("encryptalgorithm".equalsIgnoreCase(parameter))
 		{
 			cp.setEncryptionAlgorithm(value);
-			return;
+			return response;
 		}
 
 		if ("firstConferenceMemberTreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setFirstConferenceMemberTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("handlesessionprogress".equalsIgnoreCase(parameter))
@@ -2029,9 +2050,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setHandleSessionProgress(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("joinconfirmationkey".equalsIgnoreCase(parameter))
@@ -2040,9 +2061,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				MemberReceiver.setJoinConfirmationKey(value);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("joinconfirmationtimeout".equalsIgnoreCase(parameter))
@@ -2050,15 +2071,15 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setJoinConfirmationTimeout(getInteger(value));
 			} catch (Exception e) {
-				reportError("callAnswerTimeout " + value + " is not numeric" );
+				response = ("callAnswerTimeout " + value + " is not numeric" );
 			}
-			return;
+			return response;
 		}
 
 		if ("mediapreference".equalsIgnoreCase(parameter))
 		{
 			cp.setMediaPreference(value);
-			return;
+			return response;
 		}
 
 		if ("migrate".equalsIgnoreCase(parameter))
@@ -2076,16 +2097,16 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if ((ix = value.indexOf(":")) < 0) {
 
-				reportError("secondPartyNumber must be specified:  " + value);
-				return;
+				response = ("secondPartyNumber must be specified:  " + value);
+				return response;
 			}
 
             String secondPartyNumber = value.substring(ix + 1);
 
             if (secondPartyNumber == null)
             {
-                reportError("secondPartyNumber must be specified:  " + value);
-				return;
+                response = ("secondPartyNumber must be specified:  " + value);
+				return response;
             }
 
 			try {
@@ -2093,20 +2114,20 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				cp.setMigrateCall(true);
 
 			} catch (Exception e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
 
-            return;
+            return response;
 		}
 
-		if ("mute".equalsIgnoreCase(parameter))
+		if ("MuteCall".equalsIgnoreCase(parameter))
 		{
 			try {
 				cp.setMuted(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("mutewhispergroup".equalsIgnoreCase(parameter))
@@ -2114,9 +2135,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setMuteWhisperGroup(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("muteconference".equalsIgnoreCase(parameter))
@@ -2124,21 +2145,21 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setConferenceMuted(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("name".equalsIgnoreCase(parameter))
 		{
 			cp.setName(value);
-			return;
+			return response;
 		}
 
-		if ("phonenumber".equalsIgnoreCase(parameter))
+		if ("SetPhoneNo".equalsIgnoreCase(parameter))
 		{
 			cp.setPhoneNumber(value);
-			return;
+			return response;
 		}
 
 		if ("phonenumberlocation".equalsIgnoreCase(parameter))
@@ -2150,12 +2171,12 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		{
 			if (value.equalsIgnoreCase("SIP") == false && value.equalsIgnoreCase("NS") == false && value.equalsIgnoreCase("RTMP") == false)
 			{
-				reportError("Invalid protocol:  " + value);
-				return;
+				response = ("Invalid protocol:  " + value);
+				return response;
 			}
 
 			cp.setProtocol(value);
-			return;
+			return response;
 		}
 
 		if ("recorder".equalsIgnoreCase(parameter))
@@ -2163,22 +2184,22 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setRecorder(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 
 		if ("recorddirectory".equalsIgnoreCase(parameter))
 		{
 			cp.setRecordDirectory(value);
-			return;
+			return response;
 		}
 
 		if ("remotecallid".equalsIgnoreCase(parameter))
 		{
 			cp.setRemoteCallId(value);
-			return;
+			return response;
 		}
 
 		if ("voiceDetectionWhileMuted".equalsIgnoreCase(parameter))
@@ -2186,9 +2207,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setVoiceDetectionWhileMuted(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("useConferenceReceiverThread".equalsIgnoreCase(parameter))
@@ -2196,9 +2217,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setUseConferenceReceiverThread(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("voiceDetection".equalsIgnoreCase(parameter))
@@ -2206,60 +2227,55 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setVoiceDetection(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("whisperGroup".equalsIgnoreCase(parameter))
 		{
 			cp.setWhisperGroupId(value);
-			return;
+			return response;
 		}
 		if ("voipGateway".equalsIgnoreCase(parameter))
 		{
 			cp.setVoIPGateway(value);
-			return;
+			return response;
 		}
 
 		if ("secondPartyCallId".equalsIgnoreCase(parameter))
 		{
 			cp.setSecondPartyCallId(value);
-			return;
+			return response;
 		}
 		if ("sipProxy".equalsIgnoreCase(parameter))
 		{
 			cp.setSipProxy(value);
-			return;
+			return response;
 		}
 
-		if ("secondPartyCallId".equalsIgnoreCase(parameter))
-		{
-			cp.setSecondPartyCallId(value);
-			return;
-		}
 		if ("secondPartyCallEndTreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setSecondPartyCallEndTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("secondPartyName".equalsIgnoreCase(parameter))
 		{
 			cp.setSecondPartyName(value);
-			return;
+			return response;
 		}
 
-		if ("secondPartyNumber".equalsIgnoreCase(parameter))
+		if ("Set2ndPartyPhoneNo".equalsIgnoreCase(parameter))
 		{
 			cp.setSecondPartyNumber(value);
-			return;
+			return response;
 		}
 
 		if ("secondPartyTreatment".equalsIgnoreCase(parameter))
 		{
 			cp.setSecondPartyTreatment(value);
-			return;
+			return response;
 		}
 
 		if ("secondpartyVoiceDetection".equalsIgnoreCase(parameter))
@@ -2267,9 +2283,9 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setSecondPartyVoiceDetection(stringToBoolean(value));
 			} catch (ParseException e) {
-				reportError(e.toString());
+				response = (e.toString());
 			}
-			return;
+			return response;
 		}
 
 		if ("secondPartyTimeout".equalsIgnoreCase(parameter))
@@ -2277,23 +2293,13 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			try {
 				cp.setSecondPartyTimeout(getInteger(value));
 			} catch (Exception e) {
-				reportError("setSecondPartyTimeout " + value + " is not numeric" );
+				response = ("setSecondPartyTimeout " + value + " is not numeric" );
 			}
-			return;
+			return response;
 		}
 
-		if ("RtmpSendStream".equalsIgnoreCase(parameter))
-		{
-			cp.setRtmpSendStream(value);
-			return;
-		}
 
-		if ("RtmpRecieveStream".equalsIgnoreCase(parameter))
-		{
-			cp.setRtmpRecieveStream(value);
-			return;
-		}
-
+		return response;
     }
 
     private String getString(String value)
@@ -2463,8 +2469,10 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		return value.substring(0, ix);
     }
 
-    private boolean validateAndAdjustParameters(CallParticipant cp) throws ParseException
+    private String validateAndAdjustParameters(BridgeParticipant bp) throws ParseException
     {
+		CallParticipant cp = bp.callParticipant;
+		String response = null;
 		String callId = cp.getCallId();
 
 		if (callId == null) {
@@ -2474,8 +2482,8 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			if (callId.equals("0"))
 			{
-				reportError("Zero is an invalid callId");
-				return false;
+				response = ("Zero is an invalid callId");
+				return response;
 			}
 
 			if (cp.migrateCall() == false)
@@ -2486,11 +2494,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				{
 					if (callHandler.isCallEnding() == false)
 					{
-						reportError("CallId " + callId + " is already in use");
-						return false;
+						response = ("CallId " + callId + " is already in use");
+						return response;
 
 					} else {
-						reportError("Reusing callId for ending call " + callId);
+						response = ("Reusing callId for ending call " + callId);
 					}
 				}
 			}
@@ -2504,14 +2512,15 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		{
 			if (cp.getProtocol() == null || "SIP".equals(cp.getProtocol()))
 			{
-				cp.setPhoneNumber(config.formatPhoneNumber(cp.getPhoneNumber(), cp.getPhoneNumberLocation()));
-
 				if (cp.getPhoneNumber() == null)
 				{
 					if (cp.getInputTreatment() == null)
 					{
-						reportError("You must specify a phone number or a soft phone URI");
-						return false;
+						if (bp.participantJID == null)
+						{
+							response = ("You must specify a phone number or an IM address to bridge");
+							return response;
+						}
 
 					} else {
 
@@ -2523,20 +2532,19 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 						cp.setPhoneNumber(cp.getInputTreatment());
 						cp.setProtocol("NS");
 					}
+
+				} else 	{
+
+					cp.setPhoneNumber(config.formatPhoneNumber(cp.getPhoneNumber(), cp.getPhoneNumberLocation()));
 				}
 
-			} else {
+			} else if ("RTMP".equals(cp.getProtocol())) {
 
-				if (cp.getRtmpRecieveStream() == null || cp.getRtmpSendStream() == null)
-				{
-					reportError("You must specify send and recieve streams for RTMP protocol");
-					return false;
+				cp.setRtmpSendStream("vb_sender_" + System.currentTimeMillis());
+				cp.setRtmpRecieveStream("vb_reciever_" + System.currentTimeMillis());
+				cp.setPhoneNumber("voicebridge@rtmp:/" + cp.getRtmpRecieveStream() + "/" + cp.getRtmpSendStream());
 
-				} else {
-
-					cp.setPhoneNumber("voicebridge@rtmp:/" + cp.getRtmpRecieveStream() + "/" + cp.getRtmpSendStream());
-				}
-			}
+			} else response = "Unsupported bridge protocol";
 		}
 
         if (cp.getName() == null || cp.getName().equals(""))
@@ -2548,15 +2556,21 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		{
 	    	if (cp.getCallId() == null || cp.getSecondPartyNumber() == null)
 	    	{
-				reportError("You must specify old and new phone numbers to migrate a call");
-				return false;
+				response = ("You must specify old and new phone numbers to migrate a call");
+				return response;
 	    	}
+		}
+
+		if (cp.getEmailAddress() != null &&	cp.getEmailAddress().indexOf("@") == -1)
+		{
+			response = ("Email address is not valid");
+			return response;
 		}
 
 		if (cp.getConferenceId() == null &&	cp.getSecondPartyNumber() == null)
 		{
-			reportError("You must specify a conference Id");
-			return false;
+			response = ("You must specify a conference Id");
+			return response;
 		}
 
 		if (cp.getDisplayName() == null)
@@ -2602,7 +2616,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			}
 		}
 
-		return true;
+		return response;
     }
 
 
@@ -2657,179 +2671,174 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
         }
     }
 
-    private void monitorConferenceStatus(String conferenceId, boolean monitor)
+    // ------------------------------------------------------------------------
+    //
+    // Event management
+    //
+    // ------------------------------------------------------------------------
+
+    public void handleMessage(Message received)
     {
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-        if (monitor)
-        {
-            synchronized(conferenceMonitors)
-            {
-				loginfo("adding conference monitor for " + conferenceId);
-                conferenceMonitors.add(new ConferenceMonitor(service, conferenceId));
-            }
-
-		} else {
-
-            synchronized(conferenceMonitors)
-            {
-	        	ArrayList<ConferenceMonitor> monitorsToRemove = new ArrayList<ConferenceMonitor>();
-
-				for (ConferenceMonitor m : conferenceMonitors)
-				{
-					if (service != m.getService())
-					{
-						continue;
-					}
-
-					if (conferenceId.equals(m.getConferenceId()))
-					{
-						monitorsToRemove.add(m);
-					}
-				}
-
-				for (ConferenceMonitor m : monitorsToRemove)
-				{
-		    		loginfo("Removing conference monitor for " + conferenceId);
-                    conferenceMonitors.remove(m);
-                }
-            }
-        }
     }
 
-    public void monitorOutgoingCalls(boolean monitor)
-    {
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
+	public void interceptMessage(Message received)
+	{
+		//loginfo("VoiceBridge interceptMessage incoming\n" + received);
+	}
 
-        synchronized(outgoingCallListeners)
-        {
-            if (monitor == true) {
-                outgoingCallListeners.add(service);
-            } else {
-                outgoingCallListeners.remove(service);
-            }
-        }
+
+    public void callEventNotification(CallEvent callEvent)
+    {
+ 		loginfo( "VoiceBridge callEventNotification " + callEvent.toString());
+
+		reportCallEventNotification(callEvent, "monitorCallStatus");
     }
 
-    public boolean monitorIncomingCalls(boolean monitor)
-    {
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-		synchronized(incomingCallListeners)
+    private static void reportCallEventNotification(CallEvent callEvent, String monitorName)
+    {
+ 		System.out.println( "VoiceBridge reportCallEventNotification " + monitorName + " " + callEvent.toString());
+
+		if ( bridgeParticipants.containsKey(callEvent.getCallId()))
 		{
-			if (monitor == true)
+			BridgeParticipant bp = bridgeParticipants.get(callEvent.getCallId());
+
+			sendCallEventNotification(callEvent, monitorName, bp.userJID.toBareJID(), bp);
+
+		} else {	// incoming, send to every one interested
+/*
+			SessionManager sessionManager = XMPPServer.getInstance().getSessionManager();
+
+			Collection<ClientSession> sessions = sessionManager.getSessions();
+
+			for (ClientSession session : sessions)
 			{
-				if (incomingCallListeners.contains(service))
-				{
-					reportError("Client already has an incomingCallListener");
-					return false;
-				}
+				sendCallEventNotification(callEvent, monitorName, session.getAddress().toBareJID(), null);
+			}
+*/
+		}
+    }
 
-				incomingCallListeners.add(service);
-				IncomingCallHandler.setDirectConferencing(false);
+    private static void sendCallEventNotification(CallEvent callEvent, String monitorName, String jid, BridgeParticipant bp)
+    {
+		String myEvent = CallEvent.getEventString(callEvent.getEvent());
+		String callState = callEvent.getCallState().toString();
 
-				loginfo("adding incoming call monitor, setting directConferencing to false");
+		String info = callEvent.getInfo() == null ? "" : callEvent.getInfo();
+		String dtmf = callEvent.getDtmfKey() == null ? "" : callEvent.getDtmfKey();
+		String treatmentdId = callEvent.getTreatmentId() == null ? "" : callEvent.getTreatmentId();
+		int noOfCalls = callEvent.getNumberOfCalls();
+		String callId = callEvent.getCallId() == null ? "" : callEvent.getCallId();
+		String confId = callEvent.getConferenceId() == null ? "" : callEvent.getConferenceId();
+		String callInfo = callEvent.getCallInfo() == null ? "" : callEvent.getCallInfo();
 
-			} else {
+		IQ iq = new IQ(IQ.Type.set);
+		iq.setFrom(getComponent().getName() + "." + getComponent().getDomain());
+		iq.setTo("pubsub." + getComponent().getDomain());
+		Element pubsub = iq.setChildElement("pubsub", "http://jabber.org/protocol/pubsub");
+		Element publish = pubsub.addElement("publish").addAttribute("node", jid);
+		Element item = publish.addElement("item").addAttribute("id", jid);
+		Element voicebridge = item.addElement("voicebridge", "http://xmpp.org/protocol/openlink:01:00:00/features#voice-bridge");
 
-				if (incomingCallListeners.contains(service) == false)
-				{
-					return false;
-				}
+		voicebridge.addElement("jid").setText(jid);
+		voicebridge.addElement("source").setText(monitorName);
+		voicebridge.addElement("eventtype").setText(myEvent);
+		voicebridge.addElement("dtmf").setText(dtmf);
+		voicebridge.addElement("participants").setText(String.valueOf(noOfCalls));
+		voicebridge.addElement("callstate").setText(callState);
+		voicebridge.addElement("conference").setText(confId);
+		voicebridge.addElement("participant").setText(callId);
+		voicebridge.addElement("callinfo").setText(callInfo);
+		voicebridge.addElement("eventinfo").setText(info);
 
-				incomingCallListeners.remove(service);
+		if (bp != null)
+		{
+			if (bp.callParticipant.getRtmpSendStream() != null)
+			{
+				voicebridge.addElement("sendstream").setText(bp.callParticipant.getRtmpSendStream());
+			}
 
-				if (incomingCallListeners.size() == 0)
-				{
-					IncomingCallHandler.setDirectConferencing(true);
-					loginfo("removing last incoming call monitor setting directConferencing to true");
-				}
+			if (bp.callParticipant.getRtmpRecieveStream() != null)
+			{
+				voicebridge.addElement("recievestream").setText(bp.callParticipant.getRtmpRecieveStream());
+			}
+
+			if (bp.callParticipant.getRtmpVideoStream() != null)
+			{
+				voicebridge.addElement("videostream").setText(bp.callParticipant.getRtmpVideoStream());
 			}
 		}
-		return true;
+
+		getComponent().sendPacket(iq);
+    }
+
+
+    public static void registerNotification(String status, ProxyCredentials credentials)
+    {
+		System.out.println("registerNotification " + status + " " + credentials.getXmppUserName());
+
+		try {
+			Config.updateStatus(credentials.getXmppUserName(), status);
+
+		} catch (Exception e) {
+
+			System.out.println("registerNotification " + e);
+		}
+    }
+
+
+    public static void incomingCallNotification(CallEvent callEvent)
+    {
+		System.out.println("incomingCallNotification " + callEvent.toString());
+		reportCallEventNotification(callEvent, "incomingCallNotification");
+    }
+
+    public static void outgoingCallNotification(CallEvent callEvent)
+    {
+		System.out.println("outgoingCallNotification " + callEvent.toString());
+		reportCallEventNotification(callEvent, "outgoingCallNotification");
     }
 
     public static void notifyConferenceMonitors(CallEvent callEvent)
     {
 		System.out.println("notifyConferenceMonitors " + callEvent.toString());
-
-        synchronized(conferenceMonitors)
-        {
-			/*
-			 * Notify conference listeners
-			 */
-
-			String conferenceId = callEvent.getConferenceId();
-
-			String s = callEvent.toString();
-
-			if (conferenceId == null)
-			{
-				int ix;
-
-				String search = "ConferenceId='";
-
-				if ((ix = s.indexOf(search)) < 0) {
-					return;
-				}
-
-				conferenceId = s.substring(search.length());
-
-				int end;
-
-				if ((end = conferenceId.indexOf("'")) < 0) {
-					return;
-				}
-
-				conferenceId = conferenceId.substring(0, end);
-			}
-
-			for (ConferenceMonitor m : conferenceMonitors)
-			{
-					if (conferenceId.equals(m.getConferenceId()))
-					{
-						Application.reportCallEventNotification(m.getService(), callEvent, "monitorConferenceStatus");
-					}
-			}
-		}
+		reportCallEventNotification(callEvent, "notifyConferenceMonitors");
     }
 
-    public static void incomingCallNotification(CallEvent callEvent)
-    {
-		System.out.println("incomingCallNotification " + callEvent.toString());
-
-		synchronized (incomingCallListeners)
+	private static VoiceBridgeComponent getComponent()
+	{
+		if (component == null)
 		{
-	    	for (IServiceCapableConnection service : incomingCallListeners)
-	    	{
-	        	Application.reportCallEventNotification(service, callEvent, "monitorIncomingCalls");
-	    	}
+			try {
+				component = RedfirePlugin.plugin.getVoiceBridgeComponentBySiteID(String.valueOf(site.getSiteID()));
+
+			} catch (Exception e) {
+
+				System.out.println("getComponent failure " + e);
+			}
 		}
+		return component;
+	}
 
-		notifyConferenceMonitors(callEvent);
-    }
+    // ------------------------------------------------------------------------
+    //
+    // Logging
+    //
+    // ------------------------------------------------------------------------
 
-    public static void outgoingCallNotification(CallEvent callEvent)
+    private void loginfo( String s )
     {
-		IConnection conn = Red5.getConnectionLocal();
-		IServiceCapableConnection myService = (IServiceCapableConnection) conn;
-
-		System.out.println("outgoingCallNotification " + callEvent.toString());
-
-        synchronized(outgoingCallListeners)
-        {
-	    	for (IServiceCapableConnection service : outgoingCallListeners)
-	    	{
-				if (myService != service)	// exclude me, already got implict listener
-				{
-	        		Application.reportCallEventNotification(service, callEvent, "monitorOutgoingCalls");
-				}
-            }
-        }
+        log.info( s );
+        System.out.println( s );
     }
+
+    private void logerror( String s ) {
+
+        log.error( s );
+        System.out.println( "[ERROR] " + s );
+    }
+
 
     // ------------------------------------------------------------------------
     //
@@ -2951,5 +2960,21 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
         public Certificate[] getPeerCertificates() {
             return null; // ((RTMPSession) session).getPeerCertificates();
         }
+    }
+
+    // ------------------------------------------------------------------------
+    //
+    // BridgeParticipant
+    //
+    // ------------------------------------------------------------------------
+
+    class BridgeParticipant {
+
+        public JID userJID;
+        public JID participantJID = null;
+        public JID secondPartyJID = null;
+        public CallParticipant callParticipant;
+		public Object callHandler;
+		public IServiceCapableConnection service;
     }
 }

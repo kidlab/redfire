@@ -1,0 +1,1049 @@
+<canvas width="966" height="242">
+
+  	<attribute name="stream" /> 
+  	<attribute name="ns0Name" /> 
+  	<attribute name="ns1Name" /> 
+  	<attribute name="ns2Name" /> 
+  	<attribute name="ns3Name" /> 
+  	<attribute name="ns4Name" /> 
+  	<attribute name="ns5Name" /> 
+  	<attribute name="ns6Name" /> 
+  	<attribute name="ns7Name" /> 
+  	<attribute name="ns8Name" /> 
+  	<attribute name="ns9Name" /> 
+  	<attribute name="nsAName" /> 
+  	<attribute name="nsBName" />   	
+  	<attribute name="streamKey" /> 
+  	
+  	<attribute name="bandwidth" />     	
+  	<attribute name="picQuality" />     	
+  	<attribute name="framesPerSec" />     	
+  	<attribute name="micSetRate" />     	
+
+  	<attribute name="url" />  	 
+  	
+	<method event="oninit">
+/*
+		stream = "smalej";
+		ns0Name = "joe";
+		ns1Name = "peter";
+		ns2Name = "john";
+		ns3Name = "rick";
+		ns4Name = "emma";
+		ns5Name = "rachel";
+		ns6Name = "allen";
+		ns7Name = "stella";
+		ns8Name = "brian";
+		ns9Name = "tracy";
+		nsAName = "raymond";		
+		nsBName = stream;
+
+		url = "rtmp:/oflaDemo";
+
+		bandwidth = "25600"
+		picQuality = "0"
+		framesPerSec = "15"
+		micSetRate = "8"		
+*/				
+		nc = new NetConnection();
+		nc.connect(url);  
+				
+		myCamera = Camera.get();
+		myCamera.setMode(160, 120, framesPerSec, true);
+		myCamera.setQuality(bandwidth, picQuality);
+
+		myMic = Microphone.get();
+		myMic.setRate(micSetRate);		
+
+		nsX = new NetStream(nc); 
+		nsX.attachVideo(myCamera);
+		nsX.attachAudio(myMic);		
+		nsX.publish(streamKey+stream, "live"); 		
+		
+		ns0 = new NetStream(nc);		
+		ns1 = new NetStream(nc);
+		ns2 = new NetStream(nc);
+		ns3 = new NetStream(nc);
+		ns4 = new NetStream(nc);
+		ns5 = new NetStream(nc);
+		ns6 = new NetStream(nc);	
+		ns7 = new NetStream(nc);
+		ns8 = new NetStream(nc);
+		ns9 = new NetStream(nc);
+		nsA = new NetStream(nc);
+		nsB = new NetStream(nc);		
+	</method>
+
+	<view x="0" y="0" width="160">
+		<view id="flvView0" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns0Name) {
+								
+					if (mic0.getText() == "audio:on" && cam0.getText() == "video:on") {
+						mic0.setText("audio:off");
+						cam0.setText("video:on");
+					} else
+
+					if (mic0.getText() == "audio:off" && cam0.getText() == "video:on") {
+						mic0.setText("audio:on");
+						cam0.setText("video:off");
+					} else
+
+					if (mic0.getText() == "audio:on" && cam0.getText() == "video:off") {
+						mic0.setText("audio:off");
+						cam0.setText("video:off");
+					} else
+
+					if (mic0.getText() == "audio:off" && cam0.getText() == "video:off") {
+						mic0.setText("audio:on");
+						cam0.setText("video:on");
+					}
+
+					if (cam0.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic0.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act0.getText() == "") {
+						act0.setText("stop");
+						ns0.play(false);
+
+					} else
+
+					if (act0.getText() == "stop") {
+						act0.setText("");
+						ns0.play(streamKey+ns0Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt0.setText(ns0Name);
+				mic0.setText("");
+				cam0.setText("");
+				act0.setText("");				
+				
+				if (stream == ns0Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic0.setText("audio:on");
+					cam0.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns0);
+					act0.setText("");						
+					ns0.play(streamKey+ns0Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt0" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic0" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam0" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act0" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="161" y="0" width="160" >
+		<view id="flvView1" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns1Name) {
+								
+					if (mic1.getText() == "audio:on" && cam1.getText() == "video:on") {
+						mic1.setText("audio:off");
+						cam1.setText("video:on");
+					} else
+
+					if (mic1.getText() == "audio:off" && cam1.getText() == "video:on") {
+						mic1.setText("audio:on");
+						cam1.setText("video:off");
+					} else
+
+					if (mic1.getText() == "audio:on" && cam1.getText() == "video:off") {
+						mic1.setText("audio:off");
+						cam1.setText("video:off");
+					} else
+
+					if (mic1.getText() == "audio:off" && cam1.getText() == "video:off") {
+						mic1.setText("audio:on");
+						cam1.setText("video:on");
+					}
+
+					if (cam1.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic1.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act1.getText() == "") {
+						act1.setText("stop");
+						ns1.play(false);
+
+					} else
+
+					if (act1.getText() == "stop") {
+						act1.setText("");
+						ns1.play(streamKey+ns1Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt1.setText(ns1Name);
+				mic1.setText("");
+				cam1.setText("");
+				act1.setText("");				
+				
+				if (stream == ns1Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic1.setText("audio:on");
+					cam1.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns1);
+					act1.setText("");						
+					ns1.play(streamKey+ns1Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt1" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic1" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam1" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act1" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+
+	<view x="322" y="0" width="160">	
+		<view id="flvView2" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns2Name) {
+								
+					if (mic2.getText() == "audio:on" && cam2.getText() == "video:on") {
+						mic2.setText("audio:off");
+						cam2.setText("video:on");
+					} else
+
+					if (mic2.getText() == "audio:off" && cam2.getText() == "video:on") {
+						mic2.setText("audio:on");
+						cam2.setText("video:off");
+					} else
+
+					if (mic2.getText() == "audio:on" && cam2.getText() == "video:off") {
+						mic2.setText("audio:off");
+						cam2.setText("video:off");
+					} else
+
+					if (mic2.getText() == "audio:off" && cam2.getText() == "video:off") {
+						mic2.setText("audio:on");
+						cam2.setText("video:on");
+					}
+
+					if (cam2.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic2.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act2.getText() == "") {
+						act2.setText("stop");
+						ns2.play(false);
+
+					} else
+
+					if (act2.getText() == "stop") {
+						act2.setText("");
+						ns2.play(streamKey+ns2Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt2.setText(ns2Name);
+				mic2.setText("");
+				cam2.setText("");
+				act2.setText("");				
+				
+				if (stream == ns2Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic2.setText("audio:on");
+					cam2.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns2);
+					act2.setText("");						
+					ns2.play(streamKey+ns2Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt2" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic2" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam2" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act2" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+
+	<view x="483" y="0" width="160">	
+		<view id="flvView3" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns3Name) {
+								
+					if (mic3.getText() == "audio:on" && cam3.getText() == "video:on") {
+						mic3.setText("audio:off");
+						cam3.setText("video:on");
+					} else
+
+					if (mic3.getText() == "audio:off" && cam3.getText() == "video:on") {
+						mic3.setText("audio:on");
+						cam3.setText("video:off");
+					} else
+
+					if (mic3.getText() == "audio:on" && cam3.getText() == "video:off") {
+						mic3.setText("audio:off");
+						cam3.setText("video:off");
+					} else
+
+					if (mic3.getText() == "audio:off" && cam3.getText() == "video:off") {
+						mic3.setText("audio:on");
+						cam3.setText("video:on");
+					}
+
+					if (cam3.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic3.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act3.getText() == "") {
+						act3.setText("stop");
+						ns3.play(false);
+
+					} else
+
+					if (act3.getText() == "stop") {
+						act3.setText("");
+						ns3.play(streamKey+ns3Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt3.setText(ns3Name);
+				mic3.setText("");
+				cam3.setText("");
+				act3.setText("");				
+				
+				if (stream == ns3Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic3.setText("audio:on");
+					cam3.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns3);
+					act3.setText("");						
+					ns3.play(streamKey+ns3Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt3" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic3" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam3" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act3" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+
+	<view x="644" y="0" width="160">
+		<view id="flvView4" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns4Name) {
+								
+					if (mic4.getText() == "audio:on" && cam4.getText() == "video:on") {
+						mic4.setText("audio:off");
+						cam4.setText("video:on");
+					} else
+
+					if (mic4.getText() == "audio:off" && cam4.getText() == "video:on") {
+						mic4.setText("audio:on");
+						cam4.setText("video:off");
+					} else
+
+					if (mic4.getText() == "audio:on" && cam4.getText() == "video:off") {
+						mic4.setText("audio:off");
+						cam4.setText("video:off");
+					} else
+
+					if (mic4.getText() == "audio:off" && cam4.getText() == "video:off") {
+						mic4.setText("audio:on");
+						cam4.setText("video:on");
+					}
+
+					if (cam4.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic4.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act4.getText() == "") {
+						act4.setText("stop");
+						ns4.play(false);
+
+					} else
+
+					if (act4.getText() == "stop") {
+						act4.setText("");
+						ns4.play(streamKey+ns4Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt4.setText(ns4Name);
+				mic4.setText("");
+				cam4.setText("");
+				act4.setText("");				
+				
+				if (stream == ns4Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic4.setText("audio:on");
+					cam4.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns4);
+					act4.setText("");						
+					ns4.play(streamKey+ns4Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt4" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic4" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam4" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act4" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="805" y="0" width="160">
+		<view id="flvView5" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns5Name) {
+								
+					if (mic5.getText() == "audio:on" && cam5.getText() == "video:on") {
+						mic5.setText("audio:off");
+						cam5.setText("video:on");
+					} else
+
+					if (mic5.getText() == "audio:off" && cam5.getText() == "video:on") {
+						mic5.setText("audio:on");
+						cam5.setText("video:off");
+					} else
+
+					if (mic5.getText() == "audio:on" && cam5.getText() == "video:off") {
+						mic5.setText("audio:off");
+						cam5.setText("video:off");
+					} else
+
+					if (mic5.getText() == "audio:off" && cam5.getText() == "video:off") {
+						mic5.setText("audio:on");
+						cam5.setText("video:on");
+					}
+
+					if (cam5.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic5.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act5.getText() == "") {
+						act5.setText("stop");
+						ns5.play(false);
+
+					} else
+
+					if (act5.getText() == "stop") {
+						act5.setText("");
+						ns5.play(streamKey+ns5Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt5.setText(ns5Name);
+				mic5.setText("");
+				cam5.setText("");
+				act5.setText("");				
+				
+				if (stream == ns5Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic5.setText("audio:on");
+					cam5.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns5);
+					act5.setText("");						
+					ns5.play(streamKey+ns5Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt5" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic5" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam5" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act5" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="0" y="121" width="160">	
+		<view id="flvView6" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns6Name) {
+								
+					if (mic6.getText() == "audio:on" && cam6.getText() == "video:on") {
+						mic6.setText("audio:off");
+						cam6.setText("video:on");
+					} else
+
+					if (mic6.getText() == "audio:off" && cam6.getText() == "video:on") {
+						mic6.setText("audio:on");
+						cam6.setText("video:off");
+					} else
+
+					if (mic6.getText() == "audio:on" && cam6.getText() == "video:off") {
+						mic6.setText("audio:off");
+						cam6.setText("video:off");
+					} else
+
+					if (mic6.getText() == "audio:off" && cam6.getText() == "video:off") {
+						mic6.setText("audio:on");
+						cam6.setText("video:on");
+					}
+
+					if (cam6.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic6.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act6.getText() == "") {
+						act6.setText("stop");
+						ns6.play(false);
+
+					} else
+
+					if (act6.getText() == "stop") {
+						act6.setText("");
+						ns6.play(streamKey+ns6Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt6.setText(ns6Name);
+				mic6.setText("");
+				cam6.setText("");
+				act6.setText("");				
+				
+				if (stream == ns6Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic6.setText("audio:on");
+					cam6.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns6);
+					act6.setText("");						
+					ns6.play(streamKey+ns6Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt6" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic6" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam6" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act6" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="161" y="121" width="160">
+		<view id="flvView7" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns7Name) {
+								
+					if (mic7.getText() == "audio:on" && cam7.getText() == "video:on") {
+						mic7.setText("audio:off");
+						cam7.setText("video:on");
+					} else
+
+					if (mic7.getText() == "audio:off" && cam7.getText() == "video:on") {
+						mic7.setText("audio:on");
+						cam7.setText("video:off");
+					} else
+
+					if (mic7.getText() == "audio:on" && cam7.getText() == "video:off") {
+						mic7.setText("audio:off");
+						cam7.setText("video:off");
+					} else
+
+					if (mic7.getText() == "audio:off" && cam7.getText() == "video:off") {
+						mic7.setText("audio:on");
+						cam7.setText("video:on");
+					}
+
+					if (cam7.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic7.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act7.getText() == "") {
+						act7.setText("stop");
+						ns7.play(false);
+
+					} else
+
+					if (act7.getText() == "stop") {
+						act7.setText("");
+						ns7.play(streamKey+ns7Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt7.setText(ns7Name);
+				mic7.setText("");
+				cam7.setText("");
+				act7.setText("");				
+				
+				if (stream == ns7Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic7.setText("audio:on");
+					cam7.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns7);
+					act7.setText("");						
+					ns7.play(streamKey+ns7Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt7" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic7" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam7" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act7" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+
+	<view x="322" y="121" width="160">
+		<view id="flvView8" bgcolor="0xC0C0C0">	
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns8Name) {
+								
+					if (mic8.getText() == "audio:on" && cam8.getText() == "video:on") {
+						mic8.setText("audio:off");
+						cam8.setText("video:on");
+					} else
+
+					if (mic8.getText() == "audio:off" && cam8.getText() == "video:on") {
+						mic8.setText("audio:on");
+						cam8.setText("video:off");
+					} else
+
+					if (mic8.getText() == "audio:on" && cam8.getText() == "video:off") {
+						mic8.setText("audio:off");
+						cam8.setText("video:off");
+					} else
+
+					if (mic8.getText() == "audio:off" && cam8.getText() == "video:off") {
+						mic8.setText("audio:on");
+						cam8.setText("video:on");
+					}
+
+					if (cam8.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic8.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act8.getText() == "") {
+						act8.setText("stop");
+						ns8.play(false);
+
+					} else
+
+					if (act8.getText() == "stop") {
+						act8.setText("");
+						ns8.play(streamKey+ns8Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt8.setText(ns8Name);
+				mic8.setText("");
+				cam8.setText("");
+				act8.setText("");				
+				
+				if (stream == ns8Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic8.setText("audio:on");
+					cam8.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns8);
+					act8.setText("");						
+					ns8.play(streamKey+ns8Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt8" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic8" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam8" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act8" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="483" y="121" width="160">
+		<view id="flvView9" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == ns9Name) {
+								
+					if (mic9.getText() == "audio:on" && cam9.getText() == "video:on") {
+						mic9.setText("audio:off");
+						cam9.setText("video:on");
+					} else
+
+					if (mic9.getText() == "audio:off" && cam9.getText() == "video:on") {
+						mic9.setText("audio:on");
+						cam9.setText("video:off");
+					} else
+
+					if (mic9.getText() == "audio:on" && cam9.getText() == "video:off") {
+						mic9.setText("audio:off");
+						cam9.setText("video:off");
+					} else
+
+					if (mic9.getText() == "audio:off" && cam9.getText() == "video:off") {
+						mic9.setText("audio:on");
+						cam9.setText("video:on");
+					}
+
+					if (cam9.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (mic9.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (act9.getText() == "") {
+						act9.setText("stop");
+						ns9.play(false);
+
+					} else
+
+					if (act9.getText() == "stop") {
+						act9.setText("");
+						ns9.play(streamKey+ns9Name);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txt9.setText(ns9Name);
+				mic9.setText("");
+				cam9.setText("");
+				act9.setText("");				
+				
+				if (stream == ns9Name) {
+					mc.myVideo.attachVideo(Camera.get());	
+					mic9.setText("audio:on");
+					cam9.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(ns9);
+					act9.setText("");						
+					ns9.play(streamKey+ns9Name); 
+				}				
+			</method>  
+		</view>
+		<text id="txt9" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="mic9" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="cam9" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="act9" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	
+	<view x="644" y="121" width="160">
+		<view id="flvViewA" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == nsAName) {
+								
+					if (micA.getText() == "audio:on" && camA.getText() == "video:on") {
+						micA.setText("audio:off");
+						camA.setText("video:on");
+					} else
+
+					if (micA.getText() == "audio:off" && camA.getText() == "video:on") {
+						micA.setText("audio:on");
+						camA.setText("video:off");
+					} else
+
+					if (micA.getText() == "audio:on" && camA.getText() == "video:off") {
+						micA.setText("audio:off");
+						camA.setText("video:off");
+					} else
+
+					if (micA.getText() == "audio:off" && camA.getText() == "video:off") {
+						micA.setText("audio:on");
+						camA.setText("video:on");
+					}
+
+					if (camA.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (micA.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (actA.getText() == "") {
+						actA.setText("stop");
+						nsA.play(false);
+
+					} else
+
+					if (actA.getText() == "stop") {
+						actA.setText("");
+						nsA.play(streamKey+nsAName);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txtA.setText(nsAName);
+				micA.setText("");
+				camA.setText("");
+				actA.setText("");				
+				
+				if (stream == nsAName) {
+					mc.myVideo.attachVideo(Camera.get());	
+					micA.setText("audio:on");
+					camA.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(nsA);
+					actA.setText("");						
+					nsA.play(streamKey+nsAName); 
+				}				
+			</method>  
+		</view>
+		<text id="txtA" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="micA" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="camA" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="actA" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+	
+	<view x="805" y="121" width="160">
+		<view id="flvViewB" bgcolor="0xC0C0C0">
+			<method event="oninit">
+				this.setSource('myVideo.swf');
+			</method>
+			
+			<method event="onclick">
+<![CDATA[
+
+				if (stream == nsBName) {
+								
+					if (micB.getText() == "audio:on" && camB.getText() == "video:on") {
+						micB.setText("audio:off");
+						camB.setText("video:on");
+					} else
+
+					if (micB.getText() == "audio:off" && camB.getText() == "video:on") {
+						micB.setText("audio:on");
+						camB.setText("video:off");
+					} else
+
+					if (micB.getText() == "audio:on" && camB.getText() == "video:off") {
+						micB.setText("audio:off");
+						camB.setText("video:off");
+					} else
+
+					if (micB.getText() == "audio:off" && camB.getText() == "video:off") {
+						micB.setText("audio:on");
+						camB.setText("video:on");
+					}
+
+					if (camB.getText() == "video:on") 
+						nsX.attachVideo(myCamera);
+					else
+						nsX.attachVideo(null);
+
+					if (micB.getText() == "audio:on") 										
+						nsX.attachAudio(myMic);
+					else
+						nsX.attachAudio(null);
+					
+				} else {
+				
+					if (actB.getText() == "") {
+						actB.setText("stop");
+						nsB.play(false);
+
+					} else
+
+					if (actB.getText() == "stop") {
+						actB.setText("");
+						nsB.play(streamKey+nsBName);					
+					}								
+				}
+]]>
+			</method>
+
+			<method event="onload">		
+				mc = this.getMCRef();
+				txtB.setText(nsBName);
+				micB.setText("");
+				camB.setText("");
+				actB.setText("");				
+				
+				if (stream == nsBName) {
+					mc.myVideo.attachVideo(Camera.get());	
+					micB.setText("audio:on");
+					camB.setText("video:on");					
+				} else {
+					mc.myVideo.attachVideo(nsB);
+					actB.setText("");						
+					nsB.play(streamKey+nsBName); 
+				}				
+			</method>  
+		</view>
+		<text id="txtB" width="100%" x="0" y="0" fontsize="10" fgcolor="0xffff00" />	
+		<text id="micB" x="0" y="105" fontsize="10" fgcolor="0xffff00" />		
+		<text id="camB" x="105" y="105" fontsize="10" fgcolor="0xffff00" />
+		<text id="actB" x="0" y="10" fontsize="10" fgcolor="0xffff00" />		
+	</view>
+</canvas>

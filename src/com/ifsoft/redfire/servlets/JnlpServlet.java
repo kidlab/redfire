@@ -9,9 +9,8 @@ import javax.servlet.ServletOutputStream;
 import java.io.*;
 import java.util.*;
 import org.jivesoftware.util.JiveGlobals;
-import com.ifsoft.redfire.RedfireConstants;
 
-public class JnlpServlet extends HttpServlet  implements RedfireConstants {
+public class JnlpServlet extends HttpServlet {
 
 	public static final long serialVersionUID = 24362462L;
 

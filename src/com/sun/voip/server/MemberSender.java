@@ -340,7 +340,7 @@ public class MemberSender {
 	    }
 
 	    if (comfortNoiseType == CN_USE_PAYLOAD) {
-	        if (senderPacket.getRtpPayload() != RtpPacket.COMFORT_PAYLOAD) {
+	        if (senderPacket != null && senderPacket.getRtpPayload() != RtpPacket.COMFORT_PAYLOAD) {
 		    if (Logger.logLevel == -77) {
 	                Logger.println("Call " + cp
 		 	    + " sending comfort payload");

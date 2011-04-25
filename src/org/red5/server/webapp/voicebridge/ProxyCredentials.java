@@ -3,6 +3,7 @@ package org.red5.server.webapp.voicebridge;
 
 public class ProxyCredentials
 {
+    private String xmppUserName = null;
     private String userName = null;
     private String userDisplay = null;
     private char[] password = null;
@@ -19,6 +20,11 @@ public class ProxyCredentials
     public void setAuthUserName(String userName)
     {
         this.authUserName = userName;
+    }
+
+    public void setXmppUserName(String xmppUserName)
+    {
+        this.xmppUserName = xmppUserName;
     }
 
     public void setRealm(String realm)
@@ -73,6 +79,11 @@ public class ProxyCredentials
     public String getAuthUserName()
     {
         return this.authUserName;
+    }
+
+    public String getXmppUserName()
+    {
+        return this.xmppUserName;
     }
 
     public char[] getPassword() {

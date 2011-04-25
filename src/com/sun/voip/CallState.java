@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip;
@@ -33,9 +33,10 @@ public class CallState {
     public static final int ANSWERED      = 2;
     public static final int ESTABLISHED   = 3;
     public static final int ENDING        = 4;
-    public static final int ENDED         = 5;
+    public static final int RINGING       = 5;
+    public static final int ENDED         = 6;
 
-    private static final int LAST_STATE = 5;
+    private static final int LAST_STATE = 6;
     private int state;
 
     private String[] stateString = {
@@ -44,7 +45,8 @@ public class CallState {
 	"110 ANSWERED",
 	"200 ESTABLISHED",
 	"290 ENDING",
-	"299 ENDED"
+	"299 ENDED",
+	"300 RINGING"
     };
 
     public CallState() {

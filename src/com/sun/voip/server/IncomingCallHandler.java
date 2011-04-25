@@ -68,7 +68,7 @@ public class IncomingCallHandler extends CallHandler
 
     private static boolean incomingCallVoiceDetection = true;
 
-    private static boolean directConferencing = true;
+    private static boolean directConferencing = false;
     private IncomingConferenceHandler incomingConferenceHandler;
 
     public IncomingCallHandler(CallEventListener listener,
@@ -107,22 +107,24 @@ public class IncomingCallHandler extends CallHandler
 
 		} else {
 
-			if (directConferencing == false)
+			if (cp.getConferenceId() == null || cp.getConferenceId().length() == 0)
 			{
-				if (cp.getConferenceId() == null || cp.getConferenceId().length() == 0)
+				if (directConferencing)
 				{
 					Logger.println("Don't have conf, using default....");
 					cp.setConferenceId(defaultIncomingConferenceId); // wait in lobby
 
 				} else {
 
-					Logger.println("Have conf " + cp.getConferenceId());
-					haveIncomingConferenceId = true; // goto your conference
+					Logger.println("Incoming SIP, call using called phone id as conference " + cp);
+					cp.setConferenceId(cp.getToPhoneNumber());
+					haveIncomingConferenceId = true;
 				}
 
 			} else {
 
-				return;	// reject, nobody monitoring and no passcode.
+				Logger.println("Have conf " + cp.getConferenceId());
+				haveIncomingConferenceId = true; // goto your conference
 			}
 		}
 
@@ -141,152 +143,169 @@ public class IncomingCallHandler extends CallHandler
 	super.cancelRequest(s);
     }
 
-    class TransferTimer extends Thread {
-	private ConferenceMember member;
-	private String conferenceId;
+    class TransferTimer extends Thread
+    {
+		private ConferenceMember member;
+		private String conferenceId;
 
-	private static final int TRANSFER_TIMEOUT = 3 * 60 * 1000;
+		private static final int TRANSFER_TIMEOUT = 3 * 60 * 1000;
 
-	public TransferTimer(ConferenceMember member) {
-	    this.member = member;
-	    conferenceId = member.getCallParticipant().getConferenceId();
-	    start();
-	}
-
-	public void run() {
-	    try {
-		Thread.sleep(TRANSFER_TIMEOUT);
-	    } catch (InterruptedException e) {
-	    }
-
-	    if (!done && member != null) {
-
-		if (member.getCallParticipant().getConferenceId().indexOf(defaultIncomingConferenceId) == 0) {
-
-		    Logger.println("Incoming call " + member
-			+ " call transfer timedout");
-		    cancelRequest("Incoming call wasn't transferred");
+		public TransferTimer(ConferenceMember member)
+		{
+			this.member = member;
+			conferenceId = member.getCallParticipant().getConferenceId();
+			start();
 		}
-	    }
-	}
+
+		public void run() {
+			try {
+				Thread.sleep(TRANSFER_TIMEOUT);
+			} catch (InterruptedException e) {
+
+			}
+
+			if (!done && member != null)
+			{
+				if (member.getCallParticipant().getConferenceId().indexOf(defaultIncomingConferenceId) == 0) {
+
+					Logger.println("Incoming call " + member + " call transfer timedout");
+					cancelRequest("Incoming call wasn't transferred");
+				}
+			}
+		}
     }
 
     /*
      * Thread to process this incoming call.
      * Create a temporary conference and add this call.
      */
-    public void run() {
-	if (haveIncomingConferenceId == false) {
-	    cp.setConferenceId(defaultIncomingConferenceId);
-	}
+    public void run()
+    {
+		if (haveIncomingConferenceId == false) {
+			cp.setConferenceId(defaultIncomingConferenceId);
+		}
 
-	synchronized (ConferenceManager.getConferenceList()) {
-	    conferenceManager =
-	    	ConferenceManager.getConference(cp.getConferenceId());
+		synchronized (ConferenceManager.getConferenceList())
+		{
+			conferenceManager =
+				ConferenceManager.getConference(cp.getConferenceId());
 
-	    if (conferenceManager == null) {
-	        Logger.error("Couldn't start conference "
-	    	    + cp.getConferenceId());
+			if (conferenceManager == null) {
+				Logger.error("Couldn't start conference "
+					+ cp.getConferenceId());
 
-	        sendCallEventNotification(
-		    new CallEvent(CallEvent.CANT_START_CONFERENCE));
+				sendCallEventNotification(
+				new CallEvent(CallEvent.CANT_START_CONFERENCE));
 
-	        return;
-	    }
+				return;
+			}
 
-	    cp.setDisplayName(cp.getName());
-	    cp.setDtmfDetection(true);
+			cp.setDisplayName(cp.getName());
+			cp.setDtmfDetection(true);
 
-	    if (cp.getCallId() == null) {
-	        cp.setCallId(getNewCallId());
-	    }
+			if (cp.getCallId() == null) {
+				cp.setCallId(getNewCallId());
+			}
 
-	    cp.setCallAnsweredTreatment(incomingCallTreatment);
-	    cp.setVoiceDetection(incomingCallVoiceDetection);
+			cp.setCallAnsweredTreatment(incomingCallTreatment);
+			cp.setVoiceDetection(incomingCallVoiceDetection);
 
-	    if (haveIncomingConferenceId == false) {
-	        cp.setWhisperGroupId(cp.getCallId());
-	        cp.setMuted(true);
-	    }
+			if (haveIncomingConferenceId == false) {
+				cp.setWhisperGroupId(cp.getCallId());
+				cp.setMuted(true);
+			}
 
-	    if (Logger.logLevel >= Logger.LOG_INFO) {
-	        Logger.println(cp.getCallSetupRequest());
-	    }
+			if (Logger.logLevel >= Logger.LOG_INFO) {
+				Logger.println(cp.getCallSetupRequest());
+			}
 
-	    try {
-	        member = conferenceManager.joinConference(cp);
-		memberSender = member.getMemberSender();
-		memberReceiver = member.getMemberReceiver();
-	    } catch (IOException e) {
-		CallEvent callEvent =
-		    new CallEvent(CallEvent.CANT_CREATE_MEMBER);
+			try {
+				member = conferenceManager.joinConference(cp);
+			memberSender = member.getMemberSender();
+			memberReceiver = member.getMemberReceiver();
+			} catch (IOException e) {
+			CallEvent callEvent =
+				new CallEvent(CallEvent.CANT_CREATE_MEMBER);
 
-		callEvent.setInfo(e.getMessage());
-	        sendCallEventNotification(callEvent);
-	        return;
-	    }
+			callEvent.setInfo(e.getMessage());
+				sendCallEventNotification(callEvent);
+				return;
+			}
 
-	    Logger.println("Incoming Call " + cp + " joined conference "
-		+ cp.getConferenceId());
-	}
+			Logger.println("Incoming Call " + cp + " joined conference "
+			+ cp.getConferenceId());
+		}
 
-	addCall(this);    // add to list of active calls
+		addCall(this);    // add to list of active calls
 
-	String protocol = Bridge.getDefaultProtocol();
+		String protocol = Bridge.getDefaultProtocol();
 
-        if (cp.getProtocol() != null) {
-            protocol = cp.getProtocol();
-        }
+		if (cp.getProtocol() != null) {
+			protocol = cp.getProtocol();
+		}
 
-	if (protocol.equalsIgnoreCase("NS")) {
-	    csa = new NSIncomingCallAgent(this);
+		if (protocol.equalsIgnoreCase("NS")) {
+			csa = new NSIncomingCallAgent(this);
 
-	    try {
-	        csa.initiateCall();
-	    } catch (IOException e) {
-		Logger.println("initiateCall failed:  " + e.getMessage());
+			try {
+				csa.initiateCall();
 
-		CallEvent callEvent =
-		    new CallEvent(CallEvent.CANT_CREATE_MEMBER);
+			} catch (IOException e) {
 
-		callEvent.setInfo(e.getMessage());
-	        sendCallEventNotification(callEvent);
-                return;
-	    }
-	} else if (protocol.equalsIgnoreCase("SIP")) {
-	    csa = new SipIncomingCallAgent(this, requestEvent);
-        } else {
-            // XXX csa = new H323Agent(this);
-            Logger.println("H.323 support isn't implemented yet!");
+				Logger.println("initiateCall failed:  " + e.getMessage());
 
-            sendCallEventNotification(
-		new CallEvent(CallEvent.H323_NOT_IMPLEMENTED));
-            return;
-	}
+				CallEvent callEvent =
+					new CallEvent(CallEvent.CANT_CREATE_MEMBER);
 
-	if (haveIncomingConferenceId == false) {
-	    new TransferTimer(member);
-	}
+				callEvent.setInfo(e.getMessage());
+					sendCallEventNotification(callEvent);
+						return;
+			}
 
-	synchronized(stateChangeLock) {
-	    if (csa.getState() != CallState.ENDED) {
-	        try {
-		    Logger.println("Call " + cp + " Waiting for call to end...");
-		    stateChangeLock.wait();	// wait for call to end
-	        } catch (InterruptedException e) {
-	        }
-	    }
-	}
+		} else if (protocol.equalsIgnoreCase("SIP")) {
 
-	Logger.println("Call " + cp + " ended...");
-	conferenceManager.leave(member); // Remove member from conference.
+			csa = new SipIncomingCallAgent(this, requestEvent);
 
-	removeCall(this);  // remove from list of active calls
+		} else {
+				// XXX csa = new H323Agent(this);
+				Logger.println("H.323 support isn't implemented yet!");
 
-	csa = null;
-	cancelRequest("Incoming call ended");
+				sendCallEventNotification(new CallEvent(CallEvent.H323_NOT_IMPLEMENTED));
+				return;
+		}
 
-	done = true;
+		if (haveIncomingConferenceId == false) {
+			new TransferTimer(member);
+		}
+
+		synchronized(stateChangeLock)
+		{
+			if (csa.getState() != CallState.ENDED)
+			{
+				try {
+					Logger.println("Call " + cp + " Waiting for call to end...");
+					stateChangeLock.wait();	// wait for call to end
+
+				} catch (InterruptedException e) {
+
+				}
+			}
+		}
+
+		try {
+			Logger.println("Call " + cp + " ended...");
+			conferenceManager.leave(member); // Remove member from conference.
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		Logger.println("Call " + cp + " removed...");
+		removeCall(this);  // remove from list of active calls
+
+		csa = null;
+		cancelRequest("Incoming call ended");
+
+		done = true;
     }
 
     public static void setIncomingCallTreatment(String treatment) {

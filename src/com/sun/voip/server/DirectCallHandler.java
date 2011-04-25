@@ -3,12 +3,12 @@
  *
  * This file is part of jVoiceBridge.
  *
- * jVoiceBridge is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License version 2 as 
- * published by the Free Software Foundation and distributed hereunder 
+ * jVoiceBridge is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation and distributed hereunder
  * to you.
  *
- * jVoiceBridge is distributed in the hope that it will be useful, 
+ * jVoiceBridge is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Sun designates this particular file as subject to the "Classpath"
- * exception as provided by Sun in the License file that accompanied this 
- * code. 
+ * exception as provided by Sun in the License file that accompanied this
+ * code.
  */
 
 package com.sun.voip.server;
@@ -61,9 +61,10 @@ public class DirectCallHandler extends Thread implements CallEventListener {
             setState(FAILED);
             return;
         }
-        
+
         CallParticipant cp2 = new CallParticipant();
-			
+
+	cp2.setAutoAnswer(false);
 	cp2.setCallAnswerTimeout(cp.getCallAnswerTimeout());
 	cp2.setCallAnsweredTreatment(cp.getSecondPartyTreatment());
 	cp2.setCallEndTreatment(cp.getSecondPartyCallEndTreatment());
@@ -80,7 +81,7 @@ public class DirectCallHandler extends Thread implements CallEventListener {
 	}
 	cp2.setPhoneNumber(cp.getSecondPartyNumber());
 	cp2.setVoiceDetection(cp.getSecondPartyVoiceDetection());
-        
+
         ch2 = new DirectOutgoingCallHandler(cp2);
         ch1.setOtherCall(ch2);
         ch2.setOtherCall(ch1);
@@ -128,7 +129,7 @@ public class DirectCallHandler extends Thread implements CallEventListener {
             }
         }
     }
-    
+
     public int stateChanged(){
         synchronized(stateLock){
             try {
@@ -139,14 +140,14 @@ public class DirectCallHandler extends Thread implements CallEventListener {
             return callState;
         }
     }
-    
+
     public void migrateToBridge(){
             terminate();
             TwoPartyCallHandler tch = new TwoPartyCallHandler(this, cp);
             tch.start();
             setState(MIGRATED);
     }
-    
+
     public void terminate(){
         if(callState != MIGRATED){
             ch1.sendBye();
@@ -158,11 +159,11 @@ public class DirectCallHandler extends Thread implements CallEventListener {
                 Logger.println("Could not end conference");
             }
         }
-        
+
     }
 
     public void callEventNotification(CallEvent event) {
-        
+
     }
 
 }

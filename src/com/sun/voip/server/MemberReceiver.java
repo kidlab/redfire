@@ -1817,9 +1817,10 @@ public class MemberReceiver implements MixDataSource, TreatmentDoneListener {
 
         done = true;
 
-	if (speechDetector != null && speechDetector.isSpeaking()) {
-            callHandler.speakingChanged(false);
-	}
+	// TODO
+	//if (speechDetector != null && speechDetector.isSpeaking()) {
+    //        callHandler.speakingChanged(false);
+	//}
 
 	synchronized (recordingLock) {
             if (recorder != null) {

@@ -1,24 +1,32 @@
 package org.red5.server.webapp.voicebridge;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.ArrayList;
-
+import java.util.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import java.net.InetAddress;
 
-public class Config {
+import com.ifsoft.iftalk.plugin.voicebridge.*;
+import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.openfire.muc.*;
+import org.jivesoftware.database.DbConnectionManager;
 
+import org.xmpp.packet.*;
+
+public class Config implements MUCEventListener {
+
+	private MultiUserChatManager mucManager;
 	private HashMap<String, Conference> conferences;
-	private HashMap<String, Conference> extensions;
+	private HashMap<String, Conference> confExtensions;
 
 	private ArrayList<ProxyCredentials> registrations;
 	private ArrayList<String> registrars;
+	private HashMap<String, ProxyCredentials> sipExtensions;
 
 	private static Config singletonConfig;
 	private String privateHost = "127.0.0.1";
@@ -35,101 +43,219 @@ public class Config {
 
 	private Config() {
 
-		conferences = new HashMap<String, Conference>();
-		extensions = new HashMap<String, Conference>();
+	}
+
+	public void initialise(Site site)
+	{
+		conferences 	= new HashMap<String, Conference>();
+		confExtensions 	= new HashMap<String, Conference>();
+		sipExtensions 	= new HashMap<String, ProxyCredentials>();
 
 		registrations = new ArrayList<ProxyCredentials>();
     	registrars = new ArrayList<String>();
 
-		String appPath = System.getProperty("user.dir");
-		//String configFile = appPath + File.separator + "webapps" + File.separator + "voicebridge" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
-		String configFile = appPath + File.separator + ".." + File.separator + "plugins" + File.separator + "redfire" + File.separator + "WEB-INF" + File.separator + "red5voicebridge.xml";
+    	MUCEventDispatcher.addListener(this);
 
 		try {
-			System.out.println(String.format("Red5VoiceBridge read config file: %s", configFile));
+			System.out.println(String.format("VoiceBridge read site configuration: %s", site.getName()));
 
-			DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
-			Document doc = docBuilder.parse(new File(configFile));
+			privateHost = site.getPrivateHost();
+			publicHost = site.getPublicHost();
+			conferenceExten = site.getDefaultExten();
+			defaultProxy = site.getDefaultProxy();
 
-			Element tagPrivateHost = (Element) doc.getElementsByTagName("privateHost").item(0);
+			mucManager 	= XMPPServer.getInstance().getMultiUserChatManager();
 
-			if ((tagPrivateHost.getTextContent() != null) && (tagPrivateHost.getTextContent().length() > 0)) {
-				privateHost = tagPrivateHost.getTextContent();
-			}
-
-			Element tagPublicHost = (Element) doc.getElementsByTagName("publicHost").item(0);
-
-			if ((tagPublicHost.getTextContent() != null) && (tagPublicHost.getTextContent().length() > 0)) {
-				publicHost = tagPublicHost.getTextContent();
-			}
-
-			Element tagDefaultProxy = (Element) doc.getElementsByTagName("defaultProxy").item(0);
-
-			if ((tagDefaultProxy.getTextContent() != null) && (tagDefaultProxy.getTextContent().length() > 0)) {
-				defaultProxy = tagDefaultProxy.getTextContent();
-			}
-
-			Element tagConfExten = (Element) doc.getElementsByTagName("conferences").item(0);
-			conferenceExten = tagConfExten.getAttribute("exten");
-
-			NodeList tagConfernces = doc.getElementsByTagName("conference");
-
-			for (int i=0; i<tagConfernces.getLength(); i++)
+			if (mucManager.getMultiUserChatService("conference") != null)
 			{
-				Element conf = (Element) tagConfernces.item(i);
+				List<MUCRoom> rooms = mucManager.getMultiUserChatService("conference").getChatRooms();
 
-				Conference conference = new Conference();
-				conference.id = conf.getAttribute("id");
-				conference.pin = conf.getAttribute("pin");
-
-				if (conference.pin != null && conference.pin.length() == 0)
-					conference.pin = null;
-
-				conference.exten = conf.getAttribute("exten");
-
-				if (conference.exten != null && conference.exten.length() > 0)
+				for (MUCRoom room : rooms)
 				{
-					extensions.put(conference.exten, conference);
-				}
-
-				conferences.put(conference.id, conference);
-
-				System.out.println(String.format("Red5VoiceBridge conference: %s with pin %s", conference.id, conference.pin));
-			}
-
-			NodeList tagRegisters = doc.getElementsByTagName("register");
-
-			for (int i=0; i<tagRegisters.getLength(); i++)
-			{
-				Element register = (Element) tagRegisters.item(i);
-				System.out.println(String.format("Red5VoiceBridge registration host: %s username: %s authname: %s password: %s realm %s proxy: %s", register.getAttribute("host"), register.getAttribute("username"), register.getAttribute("authname"), register.getAttribute("password"), register.getAttribute("realm"), register.getAttribute("proxy")));
-
-				ProxyCredentials credentials = new ProxyCredentials();
-
-				credentials.setUserName(register.getAttribute("username"));
-				credentials.setUserDisplay(register.getAttribute("display"));
-				credentials.setAuthUserName(register.getAttribute("authname"));
-				credentials.setPassword(register.getAttribute("password").toCharArray());
-				credentials.setRealm(register.getAttribute("realm"));
-				credentials.setProxy(register.getAttribute("proxy"));
-				credentials.setHost(register.getAttribute("host"));
-
-				try {
-					InetAddress inetAddress = InetAddress.getByName(register.getAttribute("host"));
-					registrars.add(register.getAttribute("host"));
-					registrations.add(credentials);
-
-				} catch (Exception e) {
-					System.out.println(String.format("Bad Address  %s ", register.getAttribute("host")));
+					createConference(room);
 				}
 			}
+
+			processRegistrations();
 
 		} catch (Throwable t) {
 			t.printStackTrace();
 		}
 	}
 
+
+	public void terminate()
+	{
+		MUCEventDispatcher.removeListener(this);
+	}
+
+
+    // ------------------------------------------------------------------------
+    //
+    // Registrations management
+    //
+    // ------------------------------------------------------------------------
+
+	private void processRegistrations()
+	{
+		String sql = "SELECT username, sipusername, sipauthuser, sipdisplayname, sippassword, sipserver, enabled, status, stunserver, stunport, usestun, voicemail, outboundproxy, promptCredentials FROM ofSipUser ORDER BY USERNAME";
+		Connection con = null;
+		PreparedStatement pstmt = null;
+
+		try {
+			con = DbConnectionManager.getConnection();
+			pstmt = DbConnectionManager.createScrollablePreparedStatement(con, sql);
+			ResultSet rs = pstmt.executeQuery();
+			DbConnectionManager.scrollResultSet(rs, 0);
+
+			while (rs.next())
+			{
+				ProxyCredentials credentials = read(rs);
+
+				try {
+					InetAddress inetAddress = InetAddress.getByName(credentials.getHost());
+					registrars.add(credentials.getHost());
+					registrations.add(credentials);
+
+					System.out.println(String.format("VoiceBridge adding SIP registration: %s with user %s host %s", credentials.getXmppUserName(), credentials.getUserName(), credentials.getHost()));
+
+				} catch (Exception e) {
+					System.out.println(String.format("processRegistrations Bad Address  %s ", credentials.getHost()));
+				}
+			}
+			rs.close();
+			pstmt.close();
+			con.close();
+
+		} catch (SQLException e) {
+			System.out.println("processRegistrations " + e);
+		}
+	}
+
+	private ProxyCredentials read(ResultSet rs)
+	{
+		ProxyCredentials sipAccount = new ProxyCredentials();
+
+		try {
+			String username = rs.getString("username");
+			String sipusername = rs.getString("sipusername");
+			String authusername = rs.getString("sipauthuser");
+			String displayname = rs.getString("sipdisplayname");
+			String password = rs.getString("sippassword");
+			String server = rs.getString("sipserver");
+			String stunServer = rs.getString("stunserver");
+			String stunPort = rs.getString("stunport");
+            String voicemail = rs.getString("voicemail");
+            String outboundproxy = rs.getString("outboundproxy");
+
+			sipAccount.setXmppUserName(username);
+			sipAccount.setUserName(sipusername);
+			sipAccount.setAuthUserName(authusername);
+			sipAccount.setUserDisplay(displayname);
+			sipAccount.setPassword(password.toCharArray());
+			sipAccount.setHost(server);
+            sipAccount.setProxy(outboundproxy);
+            sipAccount.setRealm(server);
+
+            sipExtensions.put(sipusername, sipAccount);
+
+        } catch (SQLException e) {
+			System.out.println("ProxyCredentials " + e);
+		}
+
+		return sipAccount;
+	}
+
+	public static void updateStatus(String username, String status) throws SQLException {
+
+		String sql = "UPDATE ofSipUser SET status = ?, enabled = ? WHERE username = ?";
+
+		Connection con = null;
+		PreparedStatement psmt = null;
+
+		try {
+
+			con = DbConnectionManager.getConnection();
+			psmt = con.prepareStatement(sql);
+
+			psmt.setString(1, status);
+			psmt.setInt(2, 1);
+            psmt.setString(3, username);
+
+            psmt.executeUpdate();
+
+
+		} catch (SQLException e) {
+			System.out.println("updateStatus " + e);
+
+		} finally {
+			DbConnectionManager.closeConnection(psmt, con);
+		}
+
+	}
+
+
+    public ProxyCredentials getProxyCredentialsByPhone(String phoneNo)
+    {
+		ProxyCredentials sip = null;
+
+		if (sipExtensions.containsKey(phoneNo))
+		{
+			sip = sipExtensions.get(phoneNo);
+		}
+
+		return sip;
+    }
+
+
+    // ------------------------------------------------------------------------
+    //
+    // Conference management
+    //
+    // ------------------------------------------------------------------------
+
+
+	private void createConference(MUCRoom room)
+	{
+		Conference conference = new Conference();
+		conference.id = room.getName();
+		conference.pin = room.getPassword();
+
+		if (conference.pin != null && conference.pin.length() == 0)
+			conference.pin = null;
+
+		conference.exten = room.getDescription();
+
+		int pos = conference.exten.indexOf(":");
+
+		if (pos > 0)
+			conference.exten = conference.exten.substring(0, pos);
+		else
+			conference.exten = null;
+
+		if (conference.exten != null && conference.exten.length() > 0)
+		{
+			confExtensions.put(conference.exten, conference);
+		}
+
+		conferences.put(conference.id, conference);
+
+		System.out.println(String.format("VoiceBridge create  conference: %s with pin %s extension %s", conference.id, conference.pin, conference.exten));
+	}
+
+	private void destroyConference(MUCRoom room)
+	{
+		if (conferences.containsKey(room.getName()))
+		{
+			Conference conference1 = conferences.remove(room.getName());
+			conference1 = null;
+
+			Conference conference2 = confExtensions.remove(room.getName());
+			conference2 = null;
+
+			System.out.println(String.format("VoiceBridge destroy conference: %s", room.getName()));
+		}
+	}
 
 	public static Config getInstance() {
 
@@ -163,9 +289,9 @@ public class Config {
     {
 		Conference conf = null;
 
-		if (extensions.containsKey(phoneNo))
+		if (confExtensions.containsKey(phoneNo))
 		{
-			conf = extensions.get(phoneNo);
+			conf = confExtensions.get(phoneNo);
 		}
 
 		return conf;
@@ -175,9 +301,9 @@ public class Config {
     {
 		String id = null;
 
-		if (extensions.containsKey(phoneNo))
+		if (confExtensions.containsKey(phoneNo))
 		{
-			Conference conf = extensions.get(phoneNo);
+			Conference conf = confExtensions.get(phoneNo);
 			id = conf.id;
 		}
 
@@ -188,9 +314,9 @@ public class Config {
     {
 		String pin = null;
 
-		if (extensions.containsKey(phoneNo))
+		if (confExtensions.containsKey(phoneNo))
 		{
-			Conference conf = extensions.get(phoneNo);
+			Conference conf = confExtensions.get(phoneNo);
 			pin = conf.pin;
 
 		} else if (conferences.containsKey(meetingId)) {
@@ -437,6 +563,56 @@ public class Config {
 
         return phoneNumber;
     }
+
+    public void roomCreated(JID roomJID)
+    {
+		MUCRoom mucRoom = mucManager.getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
+
+        if (mucRoom != null)
+        {
+			createConference(mucRoom);
+		}
+    }
+
+    public void roomDestroyed(JID roomJID)
+    {
+		MUCRoom mucRoom = mucManager.getMultiUserChatService(roomJID).getChatRoom(roomJID.getNode());
+
+        if (mucRoom != null)
+        {
+			destroyConference(mucRoom);
+		}
+    }
+
+    public void occupantJoined(JID roomJID, JID user, String nickname)
+    {
+
+    }
+
+    public void occupantLeft(JID roomJID, JID user)
+    {
+
+    }
+
+    public void nicknameChanged(JID roomJID, JID user, String oldNickname, String newNickname)
+    {
+
+    }
+
+    public void messageReceived(JID roomJID, JID user, String nickname, Message message)
+    {
+
+    }
+
+    public void roomSubjectChanged(JID roomJID, JID user, String newSubject)
+    {
+
+    }
+
+	public void privateMessageRecieved(JID a, JID b, Message message)
+	{
+
+	}
 
 	private class Conference
 	{

@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" minWidth="955" minHeight="600" creationComplete="initApplication()">
+	<fx:Script> 
+		<![CDATA[ 
+		import flash.external.*;
+		import flash.media.Camera;
+		import flash.net.NetConnection;
+		import mx.core.*;
+		import mx.events.FlexEvent;
+		
+		public var rtmpUrl:String = "rtmp:/oflaDemo";
+		public var streamKey:String = "KEY";
+		public var stream:String = "ME";	
+		public var stream0:String = "OTHER1";
+		public var stream1:String = "OTHER2";
+		public var stream2:String = "OTHER3";
+		public var stream3:String = "OTHER4";
+		public var stream4:String = "OTHER5";
+		public var stream5:String = "OTHER6";
+		public var stream6:String = "OTHER7";
+		public var stream7:String = "OTHER8";
+		public var stream8:String = "OTHER9";
+		public var stream9:String = "OTHER10";
+		public var stream10:String = "OTHER11";
+		public var stream11:String = "OTHER12";
+		
+		public var myCam:Camera = Camera.getCamera() 
+		public var myMic:Microphone = getMicrophone();
+		
+		public var videoWidth:int = 256;
+		public var videoHeight:int = 192;
+		public var videoPicQuality:int = 0;
+		public var videoFps:int = 15;
+		public var videoBandwidth:int = 25600;
+		public var micSetRate:int = 22;
+		
+		public var nc:NetConnection = null;
+		
+		public var nsX:NetStream;
+		public var ns0:NetStream;
+		public var ns1:NetStream;
+		public var ns2:NetStream;
+		public var ns3:NetStream;
+		public var ns4:NetStream;
+		public var ns5:NetStream;
+		public var ns6:NetStream;
+		public var ns7:NetStream;
+		public var ns8:NetStream;
+		public var ns9:NetStream;
+		public var ns10:NetStream;
+		public var ns11:NetStream;
+
+		public var vid0:Video = new Video();
+		public var vid1:Video = new Video();
+		public var vid2:Video = new Video();
+		public var vid3:Video = new Video();
+		public var vid4:Video = new Video();
+		public var vid5:Video = new Video();
+		public var vid6:Video = new Video();
+		public var vid7:Video = new Video();
+		public var vid8:Video = new Video();
+		public var vid9:Video = new Video();
+		public var vid10:Video = new Video();
+		public var vid11:Video = new Video();
+			
+		public function initApplication():void 
+		{
+			// Define handling for window close
+			ExternalInterface.addCallback("windowCloseEvent", windowCloseEvent);
+
+			// Initialise streaming parameters
+			rtmpUrl		= FlexGlobals.topLevelApplication.parameters.rtmpUrl;
+			streamKey	= FlexGlobals.topLevelApplication.parameters.key;
+			stream		= FlexGlobals.topLevelApplication.parameters.stream;
+			stream0		= FlexGlobals.topLevelApplication.parameters.stream0;
+			stream1		= FlexGlobals.topLevelApplication.parameters.stream1;
+			stream2		= FlexGlobals.topLevelApplication.parameters.stream2;
+			stream3		= FlexGlobals.topLevelApplication.parameters.stream3;
+			stream4		= FlexGlobals.topLevelApplication.parameters.stream4;
+			stream5		= FlexGlobals.topLevelApplication.parameters.stream5;
+			stream6		= FlexGlobals.topLevelApplication.parameters.stream6;
+			stream7		= FlexGlobals.topLevelApplication.parameters.stream7;
+			stream8		= FlexGlobals.topLevelApplication.parameters.stream8;
+			stream9		= FlexGlobals.topLevelApplication.parameters.stream9;
+			stream10	= FlexGlobals.topLevelApplication.parameters.stream10;
+			stream11	= FlexGlobals.topLevelApplication.parameters.stream11;
+			
+			// Initialise the connection
+			//nc.defaultObjectEncoding = flash.net.ObjectEncoding.AMF0;
+			nc = new NetConnection();
+			//nc.objectEncoding = ObjectEncoding.AMF0;
+			nc.client = this;
+			nc.addEventListener(NetStatusEvent.NET_STATUS,netStatus);	
+			nc.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
+
+			// Open streaming connection
+			nc.connect(rtmpUrl);			
+		}
+
+		public function windowCloseEvent():void 
+		{
+			disconnected();
+		}
+
+		private function connected():void{
+			// Initialise the NetStreams with the new connection
+			ns0 = new NetStream(nc);
+			ns1 = new NetStream(nc);
+			ns2 = new NetStream(nc);
+			ns3 = new NetStream(nc);
+			ns4 = new NetStream(nc);
+			ns5 = new NetStream(nc);
+			ns6 = new NetStream(nc);
+			ns7 = new NetStream(nc);
+			ns8 = new NetStream(nc);
+			ns9 = new NetStream(nc);
+			ns10 = new NetStream(nc);
+			ns11 = new NetStream(nc);
+
+			// Initialise the local camera and microphone source
+			myCam.setMode(videoWidth,videoHeight,videoFps,true);
+			myCam.setQuality(videoBandwidth,videoPicQuality);
+			//myMic.rate = micSetRate;
+
+			// Initialise the up-stream NetStream
+			nsX = new NetStream(nc);
+			nsX.attachCamera(myCam);
+			nsX.attachAudio(myMic);
+
+			// Publish the up-stream
+			nsX.publish(streamKey + stream,"live");
+			
+			// Play 12 streams
+			initVidDisplay(ns0,vid0,video_uic0, stream0);
+			initVidDisplay(ns1,vid1,video_uic1, stream1);
+			initVidDisplay(ns2,vid2,video_uic2, stream2);
+			initVidDisplay(ns3,vid3,video_uic3, stream3);
+			initVidDisplay(ns4,vid4,video_uic4, stream4);
+			initVidDisplay(ns5,vid5,video_uic5, stream5);
+			initVidDisplay(ns6,vid6,video_uic6, stream6);
+			initVidDisplay(ns7,vid7,video_uic7, stream7);
+			initVidDisplay(ns8,vid8,video_uic8, stream8);
+			initVidDisplay(ns9,vid9,video_uic9, stream9);
+			initVidDisplay(ns10,vid10,video_uic10, stream10);
+			initVidDisplay(ns11,vid11,video_uic11, stream11);
+		}
+
+		private function getMicrophone() :Microphone 
+		{
+			var m : Microphone;
+
+			if(Capabilities.version.search('10,3') == -1)
+			{
+				m = Microphone(Microphone.getMicrophone());
+
+			} else {
+				m = Microphone(Microphone['getEnhancedMicrophone']());
+				var options : MicrophoneEnhancedOptions = new MicrophoneEnhancedOptions();
+				options.mode = MicrophoneEnhancedMode.FULL_DUPLEX;
+				options.autoGain = false;
+				options.echoPath = 128;
+				options.nonLinearProcessing = true;
+				m['enhancedOptions'] = options;
+			} 
+			
+			m.gain = 75;
+			m.codec = "Speex";
+			m.encodeQuality = 5;
+			m.setUseEchoSuppression(true);
+			
+			return m;
+		}
+
+
+		private function disconnected():void 
+		{
+			ns0.play(false);
+			ns1.play(false);
+			ns2.play(false);
+			ns3.play(false);
+			ns4.play(false);
+			ns5.play(false);
+			ns6.play(false);
+			ns7.play(false);
+			ns8.play(false);
+			ns9.play(false);
+			ns10.play(false);
+			ns11.play(false);
+
+			nsX.attachCamera(null);
+			nsX.attachAudio(null);	
+			
+			nc.close();		
+		}
+
+		private function asyncErrorHandler(event:AsyncErrorEvent):void 
+		{
+
+		}
+
+		private function securityErrorHandler(event:SecurityErrorEvent):void 
+		{
+
+		}    
+
+		private function netStatus (evt:NetStatusEvent ):void 
+		{		    	
+			switch(evt.info.code) {
+				case "NetConnection.Connect.Success":
+					DebugLabel.text = "Connected";
+					connected();
+					//break;
+				case "NetConnection.Connect.Failed":
+					DebugLabel.text = "Connect Failed";
+					DebugLabel.text = "Params:" + stream;
+					break;
+				case "NetConnection.Connect.Rejected":
+					DebugLabel.text = "Connect Rejected";
+					break;
+				case "NetStream.Play.StreamNotFound":
+					DebugLabel.text = "Play StreamNotFound";
+					break;
+				case "NetStream.Play.Failed":	
+					DebugLabel.text = "Play Failed";
+					break;
+				case "NetStream.Play.Start":	
+					DebugLabel.text = "Play Start";
+					break;
+				case "NetStream.Play.Stop":
+					//connected();
+					break;
+				case "NetStream.Buffer.Full":
+					break;
+				default:
+			}		    	
+		}
+
+
+		public function initVidDisplay(ns:NetStream,vid:Video,uic:UIComponent, streamId:String):void {
+			// Resize the display
+			uic.width = videoWidth;
+			uic.height = videoHeight;
+			
+			// Resize the video object
+			vid.width = videoWidth;
+			vid.height = videoHeight;
+			// Configure the stream		
+			var nsClientObj:Object = new Object();
+
+			ns.receiveVideo(true);
+			ns.bufferTime = 0;		
+			ns.client = nsClientObj;
+
+			nsClientObj.onMetaData = function(infoObject:Object):void
+			{					
+			};
+
+			nsClientObj.onPlayStatus = function(infoObject:Object):void
+			{					
+			};
+			ns0.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+			ns0.addEventListener(AsyncErrorEvent.ASYNC_ERROR, asyncErrorHandler);
+
+			// Init the component
+			uic.addChild(vid);
+			vid.attachNetStream(ns);
+			
+			// Start streaming
+			ns.play(streamKey + streamId);
+		}  
+
+	]]> 
+	</fx:Script>
+	
+	<s:VGroup id="vGroup0" horizontalAlign="center">	
+		<s:HGroup id="hGroup0" horizontalAlign="center">
+			<mx:UIComponent id="video_uic0" />
+			<mx:UIComponent id="video_uic1" />
+			<mx:UIComponent id="video_uic2" />
+			<mx:UIComponent id="video_uic3" />			
+		</s:HGroup>
+		<s:HGroup id="hGroup1" horizontalAlign="center">
+			<mx:UIComponent id="video_uic4" />
+			<mx:UIComponent id="video_uic5" />
+			<mx:UIComponent id="video_uic6" />
+			<mx:UIComponent id="video_uic7" />
+		</s:HGroup>
+		<s:HGroup id="hGroup2" horizontalAlign="center">
+			<mx:UIComponent id="video_uic8" />
+			<mx:UIComponent id="video_uic9" />
+			<mx:UIComponent id="video_uic10" />
+			<mx:UIComponent id="video_uic11" />
+		</s:HGroup>
+	</s:VGroup>
+	<s:Label x="10" y="602" text="Label" id="DebugLabel"/>
+</mx:Application>

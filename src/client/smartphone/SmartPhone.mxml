@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical" currentState="1" creationComplete="onInit()">
+<mx:Script source="SmartPhone.as"/>
+	<mx:states>
+		<mx:State name="1" id="state_1">
+			<mx:AddChild>
+				<mx:Canvas color="#031418" width="984" height="500" themeColor="#A800FF" id="canvas2" defaultButton="{callbtn}" borderStyle="solid" cornerRadius="10">
+					<mx:Button x="310" y="19" label="Sign Out" id="sign_out" click="onSignOut()" tabIndex="9"/>
+					<mx:NumericStepper x="328" y="466" id="max_gain_stepper" value="0" stepSize="1" maximum="100" minimum="0" change="onMaxGainChange()" width="49" height="20" tabIndex="6"/>
+					<mx:HRule x="16" y="49" width="372" strokeColor="#3F0505" shadowColor="#000000"/>
+					<mx:CheckBox x="163" label="Auto Gain" id="default_ckbox" click="onDefaultSettings()" y="466" color="#D7DDE3" tabIndex="5"/>
+					<mx:Button x="71" y="59" label="1" width="80" id="digit_1" height="30" click="onDigitClick('1')" labelPlacement="right" alpha="1.0"/>
+					<mx:Button x="156" y="59" label="2   ABC" width="80" id="digit_2" height="30" click="onDigitClick('2')" labelPlacement="left"/>
+					<mx:Button x="243" y="59" label="3   DEF" width="80" id="digit_3" height="30" click="onDigitClick('3')"/>
+					<mx:Button x="71" y="101" label="4   GHI" width="80" id="digit_4" height="30" click="onDigitClick('4')"/>
+					<mx:Button x="156" y="102" label="5   JKL" width="80" id="digit_5" height="30" click="onDigitClick('5')"/>
+					<mx:Button x="243" y="102" label="6   MNO" width="80" id="digit_6" height="30" click="onDigitClick('6')"/>
+					<mx:Button x="71" y="143" label="7   PQRS" width="80" id="digit_7" height="30" click="onDigitClick('7')" fontSize="10"/>
+					<mx:Button x="156" y="145" label="8   TUV" width="80" id="digit_8" height="30" click="onDigitClick('8')"/>
+					<mx:Button x="243" y="145" label="9   WXYZ" width="80" id="digit_9" height="30" click="onDigitClick('9')"/>
+					<mx:Button x="71" y="188" label="*" width="80" id="digit_asterisk" height="30" click="onDigitClick('*')"/>
+					<mx:Button x="156" y="189" label="0" width="80" id="digit_0" height="30" click="onDigitClick('0')"/>
+					<mx:Button x="244" y="188" label="#" width="80" id="digit_hash" height="30" click="onDigitClick('#')"/>
+					<mx:CheckBox x="3" y="225" label="Mic. On" id="talk_ckbox" click="onAlwaysTalk()" color="#D2DCDF" tabIndex="7"/>
+					<mx:Button x="37" y="255" label="Call" height="61" id="callbtn" click="onCall()" width="66" tabIndex="2"/>
+					<mx:Button x="37" y="255" label="Accept" height="61" id="acceptBtn" click="onAccept()" alpha="0.5"/>
+					<mx:Button x="303" y="252" label="Hangup" width="72" height="61" id="hangup_btn" click="onHangupStatus()" tabIndex="3"/>
+					<mx:Text x="0" y="20" text="Hello," width="220.5" id="userName_txt"  color="#00FF00" fontSize="11"/>
+					<mx:Text x="262" y="468" text="Max Gain" width="58" id="gain_label" color="#E1D5D3"/>
+					<mx:ProgressBar x="20" y="291" width="66" id="activityLevel_pb" mode="manual" color="#A0A9AB" fontFamily="Verdana"/>
+					<mx:Text x="28" y="269" width="52" id="gain_value_box" color="#8A9092"/>
+					<mx:Text x="20" y="321" width="144" id="leg_state_box" color="#CED9DC" fontSize="10"/>
+					<mx:Text x="163" y="321" width="225" id="indication_box" color="#BDCED2" textAlign="right" fontSize="10"/>
+					<mx:TextInput x="110.5" y="272" width="174.5" id="call_box" editable="true" displayAsPassword="false" backgroundColor="#130A0A" borderColor="#D9DFE3" color="#CBD5D7" backgroundAlpha="0.0" alpha="0.53" borderStyle="inset" tabIndex="1"/>
+					<mx:Button x="20" y="461" label="Clear Log" id="clearBtn" click="onClear()" height="29" tabIndex="4"/>
+					<mx:TextArea x="20" y="344" width="368" height="109" id="status_log2" enabled="true" horizontalScrollPolicy="auto" verticalScrollPolicy="auto" wordWrap="true" editable="false" backgroundColor="#220505" backgroundAlpha="0.0" color="#9AA0A2" themeColor="#B6BCC0" borderStyle="inset" alpha="0.33" liveScrolling="true" tabEnabled="false"/>
+					<mx:Label x="71" y="224" width="287" id="callerID_lbl" fontSize="10" color="#FFFFFF" height="23"/>
+				
+
+					<mx:Canvas x="416" y="10" width="542" height="468" id="videoPanel" visible="true">
+						<mx:Label x="84.5" y="354" text="Video Height :" color="#F2F8F9" fontFamily="Georgia" fontSize="12"/>
+						<mx:Label x="85.5" y="382" text="Video Width :" color="#F3F8F9" fontFamily="Georgia" fontSize="12"/>
+						<fms:VideoObject xmlns:fms="*" id="videoObj" x="118.5" y="21" width="323.5" height="211"/>
+						<mx:Text x="174.5" y="379" width="94" color="#F1F6F7" fontSize="12" id="videowidth"/>
+						<mx:Text x="174.5" y="354" color="#F3F8F9" width="94" id="videoheight" fontSize="12"/>
+						<mx:Label x="84.5" y="437" text="Current FPS :" color="#F2F8F9" fontSize="12" fontFamily="Georgia"/>
+					    <mx:Label x="301.5" y="358" text="Video Bitrate(Kbps) :" color="#F3F8F9" fontFamily="Georgia" fontSize="12"/>
+					    <mx:Label x="301.5" y="385" text="Audio Bitrate(Kbps) :" color="#F1F7F8" fontFamily="Georgia" fontSize="12"/>
+					    <mx:Label x="301.5" y="414" text="Buffer Length :" color="#F2F8F9" fontFamily="Georgia" fontSize="12"/>
+					    <mx:Label x="84.5" y="411" text="Time(sec) :" fontFamily="Georgia" fontSize="12" color="#F3F8F9" width="95"/>
+					    <mx:Text x="174.5" y="408" width="93" id="time" fontFamily="Verdana" fontSize="12" color="#EFF5F7"/>
+					    <mx:Text x="174.5" y="434" width="93" id="fps" fontFamily="Verdana" fontSize="12" color="#F1F6F7"/>
+					    <mx:Text x="427.5" y="358" width="93" id="videoBitrate" fontFamily="Verdana" fontSize="12" color="#F2F8F9" height="21"/>
+					    <mx:Text x="427.5" y="385" width="93" id="audioBitrate" fontFamily="Verdana" fontSize="12" color="#F3F7F8"/>
+					    <mx:Text x="427.5" y="414" width="93" id="buffer" fontFamily="Verdana" fontSize="12" color="#F1F7F9"/>
+					    <mx:Label x="192.5" y="317" text="Stream Stats" width="149" fontFamily="Courier New" fontSize="20" fontWeight="bold" fontStyle="italic" color="#F3F8F9"/>
+					</mx:Canvas>
+					
+				</mx:Canvas>
+			</mx:AddChild>
+			<mx:SetProperty name="width" value="100%"/>
+			<mx:SetProperty name="height" value="100%"/>
+			<mx:SetStyle name="backgroundGradientAlphas" value="[1.0, 0.52]"/>
+			<mx:SetStyle name="backgroundGradientColors" value="[#050000, #050000]"/>
+			<mx:SetStyle name="horizontalAlign" value="center"/>
+			<mx:SetProperty name="layout" value="vertical"/>
+			<mx:SetStyle name="color" value="#000000"/>
+			<mx:AddChild relativeTo="{canvas2}" position="before">
+				<mx:Label text="Sample Flash Phone" fontSize="25" color="#BBBBBB"/>
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+</mx:Application>

@@ -217,7 +217,7 @@ public class SipServer implements SipListener {
 					registrations.add(new RegisterProcessing(inetAddress.getHostAddress(), voIPGateways.get(i), voIPGatewayLoginInfo.get(i)));
 
 				} catch (Exception e) {
-					System.out.println(String.format("Bad Address  %s ", voIPGateways.get(i)));
+					System.out.println(String.format("SipServer - setup bad address  %s error -  %s", voIPGateways.get(i), e.toString()));
 					continue;
 				}
 			}
@@ -339,6 +339,8 @@ public class SipServer implements SipListener {
 
 	    String sipCallId = callIdHeader.getCallId();
 
+ 		Logger.writeFile("SipServer:  processRequest " + sipCallId);
+
             SipListener sipListener = findSipListener(requestEvent);
 
 	    /*
@@ -380,8 +382,7 @@ public class SipServer implements SipListener {
         	    String from = fromHeader.getAddress().toString();
         	    String to = toHeader.getAddress().toString();
 
-		    Logger.writeFile("SipServer:  duplicate INVITE from "
-			+ from + " to " + to);
+		    Logger.writeFile("SipServer:  duplicate call with sipCallId " + sipCallId + " from " + from + " to " + to);
 
 		    return;
 		}

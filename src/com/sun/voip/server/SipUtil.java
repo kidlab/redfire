@@ -332,16 +332,7 @@ if (false) {
 
 	String voipGateway = null;
 
-	if (toNumber.length() <= 4)
-	{
-	    /*
-	     * XXX Special case for <= 4 digit phone numbers
-	     */
-
-	    voipGateway = proxy;
-	    Logger.println("Call " + cp + " Using proxy " + proxy + " for " + toNumber);
-
-    } else if (toNumber.indexOf("sip:") == 0) {
+   	if (toNumber.indexOf("sip:") == 0) {
 		/*
 		 * If a SIP URI is specified, parse it and send
 		 * the request directly to the target unless sendSipUriToProxy is false.
@@ -416,6 +407,11 @@ if (false) {
 			//cp.setPhoneNumber(toNumber.substring(4));  // skip sip:
 			toNumber = toNumber.substring(4);
 		}
+
+	} else {		// telephone number
+
+	    voipGateway = proxy;
+	    Logger.println("Call " + cp + " Using proxy " + proxy + " for " + toNumber);
 	}
 
 	if (toNumber.indexOf("@") < 0 && CallHandler.enablePSTNCalls() == false) {
@@ -439,35 +435,44 @@ if (false) {
 
 		} else {
 
-			if (voipGateway.equals(proxy))
-				gatewayRequired = true;
+			voipGateway = proxy;
+			gatewayRequired = true;
 		}
+
+	} else {
+
+		if (voipGateway.equals(proxy))
+			gatewayRequired = true;
 	}
 
 	if (gatewayRequired)
 	{
-		int voipIndex = 0;
-
-		for (int i=0; i<proxyCredentialList.size(); i++)
+		if (proxyCredentialList.size() == 0)
 		{
-			ProxyCredentials proxyCredentials = proxyCredentialList.get(i);
+			int voipIndex = 0;
 
-			if (voipGateway.equals(proxyCredentials.getProxy()))
+			for (int i=0; i<proxyCredentialList.size(); i++)
 			{
-				voipIndex = i;
+				ProxyCredentials proxyCredentials = proxyCredentialList.get(i);
+
+				if (voipGateway.equals(proxyCredentials.getProxy()))
+				{
+					voipIndex = i;
+				}
 			}
+
+			ProxyCredentials proxyCredentials = proxyCredentialList.get(voipIndex);
+
+			fromName = proxyCredentials.getUserDisplay();
+			voipGateway = proxyCredentials.getHost();
+			obProxy = proxyCredentials.getProxy();
+			fromAddress = addressFactory.createSipURI(proxyCredentials.getUserName(), voipGateway);
+
+       	 	cp.setProxyCredentials(proxyCredentials);				// we need this to match SIP transaction later
+        	cp.setDisplayName(proxyCredentials.getUserDisplay());	// we need this to get proxy authentication details later
 		}
 
-		ProxyCredentials proxyCredentials = proxyCredentialList.get(voipIndex);
-
-		fromName = proxyCredentials.getUserDisplay();
-		voipGateway = proxyCredentials.getHost();
-		obProxy = proxyCredentials.getProxy();
-		fromAddress = addressFactory.createSipURI(proxyCredentials.getUserName(), voipGateway);
         toAddress = addressFactory.createSipURI(toNumber, voipGateway);
-
-        cp.setProxyCredentials(proxyCredentials);				// we need this to match SIP transaction later
-        cp.setDisplayName(proxyCredentials.getUserDisplay());	// we need this to get proxy authentication details later
 
 	} else {
 
@@ -612,6 +617,23 @@ if (false) {
 			Logger.error("Creating registration route error " + e);
 		}
 	}
+
+	if (cp.isAutoAnswer())
+	{
+		Logger.println("Call " + cp + " alert-info added");
+
+		try {
+
+			SIPAlertInfo alertInfo = new SIPAlertInfo();
+			alertInfo.setNamePair("info=alert-autoanswer") ;
+			invite.addHeader(alertInfo) ;
+
+		} catch (Exception e) {
+
+			Logger.error("Creating alert info error " + e);
+		}
+	}
+
 
 	if (sdp != null) {
             contentTypeHeader =

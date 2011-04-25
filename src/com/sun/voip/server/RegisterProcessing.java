@@ -140,7 +140,8 @@ class RegisterProcessing implements SipListener {
 		if (statusCode == Response.OK) {
 				isRegistered = true;
 
-			Logger.println("Voice bridge successfully registered with "	+ registrar);
+			Logger.println("Voice bridge successfully registered with "	+ registrar + " for " + proxyCredentials.getXmppUserName());
+			Application.registerNotification("Registered", proxyCredentials);
 
         	sipServerCallback.removeSipListener(sipCallId);
 
@@ -162,15 +163,18 @@ class RegisterProcessing implements SipListener {
 						} catch (Exception e) {
 
 							Logger.println("Registration failed, cannot send transaction " + e);
+							Application.registerNotification("RegistrationFailed", proxyCredentials);
 						}
 
 					} else {
-
 						Logger.println("Registration failed, cannot create transaction");
+						Application.registerNotification("RegistrationFailed", proxyCredentials);
 					}
 
-                } else
+                } else {
                     Logger.println("Registration failed " + responseReceivedEvent);
+					Application.registerNotification("RegistrationFailed", proxyCredentials);
+				}
             }
 
 		} else {
@@ -205,9 +209,11 @@ class RegisterProcessing implements SipListener {
         sipServerCallback.removeSipListener(sipCallId);
     }
 
-    private void register() throws IOException {
-	Logger.println("Registering with " + registrar);
+    private void register() throws IOException
+    {
+		Logger.println("Registering with " + registrar);
 
+		Application.registerNotification("Registering", proxyCredentials);
 
         FromHeader fromHeader = getFromHeader();
 
@@ -357,7 +363,8 @@ class RegisterProcessing implements SipListener {
         this.registerRequest = request;
     }
 
-    public void unregister() throws IOException {
+    public void unregister() throws IOException
+    {
         if (!isRegistered) {
             return;
         }
@@ -400,6 +407,8 @@ class RegisterProcessing implements SipListener {
 		+ e.getMessage());
 	    return;
         }
+
+		Application.registerNotification("Unregistering", proxyCredentials);
     }
 
     public boolean isRegistered() {

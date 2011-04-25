@@ -86,6 +86,7 @@ public class CallParticipant {
     private boolean handleSessionProgress	   = false;
     private String remoteMediaInfo		   = null;
     private ProxyCredentials proxyCredentials = null;
+    private boolean autoAnswer = true;
 
     /*
      * Second party in a two party call or target of migration
@@ -99,6 +100,8 @@ public class CallParticipant {
     private boolean secondPartyVoiceDetection      = false;
     private String  rtmpSendStream				= null;
     private String  rtmpRecieveStream				= null;
+    private String  rtmpVideoStream				= null;
+    private String  emailAddress				= null;
 
     /**
      * Constructor
@@ -143,6 +146,20 @@ public class CallParticipant {
         return rtmpRecieveStream;
     }
 
+
+    /**
+     * Get RTMP video stream name
+     */
+    public String getRtmpVideoStream() {
+        return rtmpVideoStream;
+    }
+
+    /**
+     * Get email address
+     */
+    public String getEmailAddress() {
+        return emailAddress;
+    }
 
     /**
      * Get audio treatment string for call answered
@@ -340,11 +357,22 @@ public class CallParticipant {
 	return isRecorder;
     }
 
+	/**
+	 * Is call auto-answered
+	 *
+	*/
+
+    public boolean isAutoAnswer()
+    {
+		return autoAnswer;
+	}
+
     /**
      * Get media preference
      */
-    public String getMediaPreference() {
-	return mediaPreference;
+    public String getMediaPreference()
+    {
+		return mediaPreference;
     }
 
     /**
@@ -511,6 +539,21 @@ public class CallParticipant {
     public void setRtmpRecieveStream(String rtmpRecieveStream) {
         this.rtmpRecieveStream = rtmpRecieveStream;
     }
+
+    /**
+     * Set RTMP video stream name
+     */
+    public void setRtmpVideoStream(String rtmpVideoStream) {
+        this.rtmpVideoStream = rtmpVideoStream;
+    }
+
+    /**
+     * Set email address
+     */
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
+    }
+
 
     /**
      * Set call answer timeout
@@ -736,6 +779,14 @@ public class CallParticipant {
     public void setRecorder(boolean isRecorder) {
 	this.isRecorder = isRecorder;
     }
+
+    /**
+     * Set autoAnswer
+     */
+    public void setAutoAnswer(boolean autoAnswer) {
+	this.autoAnswer = autoAnswer;
+    }
+
 
     /**
      * Set the name of the call participant

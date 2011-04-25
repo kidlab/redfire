@@ -56,6 +56,7 @@ public class TwoPartyCallHandler extends Thread {
 
 	CallParticipant cp2 = new CallParticipant();
 
+	cp2.setAutoAnswer(false);
 	cp2.setCallAnswerTimeout(cp.getCallAnswerTimeout());
 	cp2.setCallAnsweredTreatment(cp.getSecondPartyTreatment());
 	cp2.setCallEndTreatment(cp.getSecondPartyCallEndTreatment());

@@ -1,0 +1,94 @@
+<html>
+<head>
+<title>ScreenViewer</title>
+	<script type="text/javascript" src="swfobject.js"></script>
+	<script type="text/javascript">
+
+	var flexStream = null;
+
+	function setupApp()
+	{
+		flexStream = document.getElementById("flexStreamDIV");
+
+	}
+
+	function stopApp()
+	{
+		if (flexStream != null)
+		{
+			flexStream.windowCloseEvent();
+		}
+	}
+
+function getParameter(string, parm, delim) {
+
+     if (string.length == 0) {
+     	return '';
+     }
+
+	 var sPos = string.indexOf(parm + "=");
+
+     if (sPos == -1) {return '';}
+
+     sPos = sPos + parm.length + 1;
+     var ePos = string.indexOf(delim, sPos);
+
+     if (ePos == -1) {
+     	ePos = string.length;
+     }
+
+     return unescape(string.substring(sPos, ePos));
+}
+
+function getPageParameter(parameterName, defaultValue) {
+
+	var s = self.location.search;
+
+	if ((s == null) || (s.length < 1)) {
+		return defaultValue;
+	}
+
+	s = getParameter(s, parameterName, '&');
+
+	if ((s == null) || (s.length < 1)) {
+		s = defaultValue;
+	}
+
+	return s;
+}
+
+	</script>
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupApp()" onUnload="stopApp()">
+<div id="flexStreamDIV"></div>
+<script type="text/javascript">
+
+		var stream 		= getPageParameter('me', 'ME');
+		var others 		= getPageParameter('others', 'ME$ME$ME$ME$ME$ME$ME$ME$ME$ME$ME$ME')
+		var url 		= getPageParameter('url', 'rtmp:/oflaDemo');
+		var key 		= getPageParameter('key', 'KEY');
+
+		fo = new SWFObject("flexStream.swf", "flexStream", "100%", "100%", "10");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "flexStream");
+
+		fo.addVariable("rtmpUrl", url);
+		fo.addVariable("key", key);
+		fo.addVariable("stream", stream);
+
+		var users = others.split("$")
+		var sizeI = users.length
+
+		if (sizeI > 12) {
+			sizeI = 12;
+		}
+
+		for (var i = 0; i < sizeI; i++)
+		{
+			fo.addVariable("stream" + i, users[i]);
+		}
+
+		fo.write("flexStreamDIV");
+</script>
+</body>
+</html>
