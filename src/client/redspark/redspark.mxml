@@ -10,9 +10,12 @@
 <mx:Script>
 
 <![CDATA[
-	
+
+	import flash.net.NetConnection;
+	import flash.external.*;
+	import flash.utils.Timer;	
+	import mx.core.*;
 	import mx.controls.Alert;	
-	import flash.utils.Timer;
 	import org.igniterealtime.xiff.core.*;
 	import org.igniterealtime.xiff.data.*;
 	import org.igniterealtime.xiff.events.*;		
@@ -26,6 +29,7 @@
 	private var _lastSent:int = 0;
 	private var username:String;
 	private var password:String;
+	private var displayName:String;
 
 	private function initApp():void
 	{
@@ -115,6 +119,8 @@
 
 		connection.addEventListener(LoginEvent.LOGIN, function( event:LoginEvent):void 
 		{
+			displayName = connection.username;
+		
 			var recipient:EscapedJID = new EscapedJID(connection.domain);
 			var availablePresence:Presence = new Presence(recipient, null, null, null, "Logged In");
 			connection.send(availablePresence);
@@ -322,7 +328,6 @@
 	{	
 		if (card != null)
 		{
-			var displayName:String = connection.username;
 			var nickname:String = card.nickname;
 			
 			if (card.name != null)
@@ -336,9 +341,6 @@
 
 			if(nickname && nickname.length > 0)
 				displayName = nickname;
-
-
-			welcome.text = "Welcome " + displayName;
 		}
 		
 	}	
