@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mx:Application
 	xmlns:mx="http://www.adobe.com/2006/mxml" 
-	xmlns:v="com.salesbuilder.view.*" 
-	xmlns:c="com.salesbuilder.control.*" 
-	xmlns:lib="flexlib.containers.*" 
 	width="100%" height="100%"
 	backgroundColor="#ffffff"
 	layout="absolute"
-	paddingLeft="5" paddingRight="0" paddingBottom="0" paddingTop="0"	
+	paddingLeft="0" paddingRight="0" paddingBottom="0" paddingTop="0"	
 	applicationComplete="initApp()">
 	
-	<mx:Script><![CDATA[
+<mx:Script>
+
+<![CDATA[
 	
 	import mx.controls.Alert;	
 	import flash.utils.Timer;
@@ -21,127 +20,35 @@
         import org.igniterealtime.xiff.vcard.VCard;
 	import org.igniterealtime.xiff.openlink.*;
 
-	import com.moneyserve.control.ConnectionManager;
-	
-	import com.salesbuilder.control.TabManager;
-
-	import mx.managers.PopUpManager;
-	import mx.events.ItemClickEvent;
-	import flash.system.Security;
-
 	private var connection:XMPPConnection;
 	private var connectiontype:String = "socket";
 	private var keepAliveTimer:Timer;
 	private var _lastSent:int = 0;
-
-	public function windowCloseEvent():void 
-	{
-		logout();
-	}
+	private var username:String;
+	private var password:String;
 
 	private function initApp():void
 	{
-		TabManager.tabNavigator = tn;
-
-		loginDialog.setVisible(true);
-		mainDialog.setVisible(false);
-
-		connectSetup();
-		focusUsername();
+		ExternalInterface.addCallback("windowCloseEvent", logout);
+		ExternalInterface.addCallback("login", login);	
 		
-		ExternalInterface.addCallback("windowCloseEvent", windowCloseEvent);		
+		username 	= FlexGlobals.topLevelApplication.parameters.username;		
+		password 	= FlexGlobals.topLevelApplication.parameters.password;	
+		connectiontype 	= FlexGlobals.topLevelApplication.parameters.connectionType;
+		
+		connectSetup();			
 	}
 
-	private function synchronize():void
-	{
 
-	}
-
-	private function buttonBarClick(event:ItemClickEvent):void
-	{
-		switch (event.index) 
-		{
-			case 0:
-				//TabManager.openDashboard();				
-				//TabManager.openTab(Demo1, "Instant messaging Demo");
-				
-				break;
-			case 1:
-				//TabManager.openTab(Demo2, "Video Chat with phones Demo");
-				break;
-			case 2:
-				//TabManager.openTab(ContactSummary, "ContactSummary");
-				break;
-			case 3:
-				//TabManager.openTab(OpportunitySummary, "OpportunitySummary");
-				break;
-			case 4:
-				//TabManager.openDashboard();
-				break;
-		}
-	}
-
-	private function toggleMaximize():void
-	{
-
-	}
-
-	private function search():void
-	{
-		searchPopup.search(searchStr.text);
-	}
-
-	protected function searchKeyDownHandler(event:KeyboardEvent):void
-	{
-		if (searchPopup.currentState == "hidden" && event.keyCode != Keyboard.DOWN)
-		{
-			return
-		}
-
-		switch (event.keyCode) 
-		{
-			case Keyboard.DOWN:
-				if (searchPopup.currentState == "hidden") searchPopup.currentState = "";
-				searchPopup.selectNext();
-			break;
-			case Keyboard.UP:
-				searchPopup.selectPrevious();
-				searchStr.setSelection(searchStr.text.length, searchStr.text.length);
-			break;
-			case Keyboard.ENTER:
-				searchPopup.openSelectedItem();
-			break;
-			case Keyboard.ESCAPE:
-				searchPopup.currentState = "hidden";
-			break;
-		}
-	}
-
-	private function newAccount():void
-	{
-
-	}
-
-	private function loginToServer():void {
-
-		if(userNameField.length == 0 || passwordField.length == 0) 
-		{
-			showErrorText("Please enter username and password");
-			return;
-		}
-
-		connection.username = userNameField.text;
-		connection.password = passwordField.text;
-
+	public function login():void 
+	{		
+		connectiontype = ExternalInterface.call("getConnectionType");
 
 		if (connectiontype == "socket") {
 			connection.connect(XMPPConnection.STREAM_TYPE_STANDARD);
 		} else {			
 			connection.connect( XMPPConnection.STREAM_TYPE_STANDARD_TERMINATED);
-		}
-
-		loginButton.enabled = false;
-		showErrorText("");				
+		}				
 	}
 
 
@@ -152,14 +59,11 @@
 		//var unavailablePresence:Presence = new Presence(recipient, null, Presence.TYPE_UNAVAILABLE, null, "Logged out");
 		//connection.send(unavailablePresence);
 
-		// Now disconnect
 		connection.disconnect();
 	}
 
 	private function connectSetup():void 
 	{  
-		connectiontype = ExternalInterface.call("getConnectionType");
-		
 		switch(connectiontype)
 		{
 			case "http":
@@ -190,15 +94,12 @@
 
 		}
 
-		connection.resource = "redspark";
+		connection.username = username;
+		connection.password = password;
+		connection.resource = ExternalInterface.call("getResource");
 		connection.domain = ExternalInterface.call("getDomain");     			
-		connection.server = ExternalInterface.call("getHostname"); 
+		connection.server = ExternalInterface.call("getHostname");
 		
-		ConnectionManager.connection = connection;
-
-	      	//Security.allowDomain( "*" );
-	      	//Security.allowInsecureDomain("*");
-	      	//Security.loadPolicyFile("xmlsocket://" + connection.server + ":5229");
 
 		connection.addEventListener("outgoingData", function(event:Event):void 
 		{
@@ -214,10 +115,6 @@
 
 		connection.addEventListener(LoginEvent.LOGIN, function( event:LoginEvent):void 
 		{
-			loginDialog.setVisible(false);
-			mainDialog.setVisible(true);
-			welcome.text = "Welcome " + connection.username;
-
 			var recipient:EscapedJID = new EscapedJID(connection.domain);
 			var availablePresence:Presence = new Presence(recipient, null, null, null, "Logged In");
 			connection.send(availablePresence);
@@ -241,7 +138,6 @@
 				}
 			}
 
-			//TabManager.openDashboard();
 		});
 
 		connection.addEventListener(XIFFErrorEvent.XIFF_ERROR, function(event:XIFFErrorEvent):void 
@@ -252,12 +148,6 @@
 		connection.addEventListener(DisconnectionEvent.DISCONNECT, function(event:DisconnectionEvent):void 
 		{
 			if (keepAliveTimer) keepAliveTimer.stop();
-		
-			loginDialog.setVisible(true);
-			loginButton.enabled = true;
-
-			mainDialog.setVisible(false);
-
 		});
 		
 		connection.addEventListener(MessageEvent.MESSAGE, function(event:MessageEvent):void 
@@ -281,11 +171,7 @@
 				ExternalInterface.call("videoInvite", xNode.attributes.me, xNode.attributes.others);
 			}
 
-		});		
-
-
-		userNameField.text = "1291";
-		passwordField.text = "969131";			
+		});				
 	}
 
 	private function handlePubsub(eventNode:XMLNode):void
@@ -379,7 +265,7 @@
 				}								
 			}
 			
-			Alert.show(jid + " " + source + " " + eventtype + " " + callstate + " " + conference + " " + videostream);
+			//Alert.show(jid + " " + source + " " + eventtype + " " + callstate + " " + conference + " " + videostream);
 		}				
 	}
 
@@ -418,10 +304,6 @@
 	}
 	
 	
-	private function focusUsername():void 
-	{
-		focusManager.setFocus(userNameField);
-	}
 
 	public function checkKeepAlive(event:TimerEvent):void 
 	{
@@ -430,30 +312,14 @@
 	}
 
 
-	public function reset():void 
+	public function showErrorText(text:String):void 
 	{
-		if(loginButton.enabled == false)
-		{
-			loginButton.enabled = true;
-			focusManager.setFocus(userNameField);
-		}
+		
 	}
 
-	public function showErrorText(text:String):void {
-		errorLabel.text = text;
-	}
 
-	private function handleKeyUp(event:KeyboardEvent):void 
-	{
-		if(event.keyCode == Keyboard.ENTER)
-		{
-			loginToServer();
-		}
-	}
-	
 	public function handleVCard(card:VCard):void 
-	{
-	
+	{	
 		if (card != null)
 		{
 			var displayName:String = connection.username;
@@ -477,108 +343,6 @@
 		
 	}	
 	
-	]]></mx:Script>
-	
-	<mx:Style source="styles.css"/>
-	
-	<mx:states>
-		<mx:State name="hidesearch">
-			<mx:RemoveChild target="{searchPopup}"/>
-		</mx:State>
-	</mx:states>
-
-	<!-- Holds lists of application parameters: states, industries, sales people, etc... -->
-	<!-- c:Params id="params"/ -->
-
-	<mx:Canvas verticalCenter="0" horizontalCenter="0" width="450" height="200" styleName="appContainer" visible="true" id="loginDialog" verticalScrollPolicy="off" includeInLayout="{loginDialog.visible}">
-
-		<mx:Label id="mainTitle" text="RedSpark" fontSize="18" top="10" horizontalCenter="0"/>
-		
-		<mx:Grid left="20" right="20" top="80" width="100%">
-			<mx:GridRow width="100%" height="100%">
-				<mx:GridItem width="100%" height="100%">
-					<mx:Label text="Username" styleName="formLabel" />
-				</mx:GridItem>
-				<mx:GridItem width="100%" height="100%">
-					<mx:Label id="passwordLabel" text="Password" styleName="formLabel" />
-				</mx:GridItem>
-			</mx:GridRow>
-			<mx:GridRow width="100%" height="100%">
-				<mx:GridItem width="100%" height="100%">
-					<mx:TextInput fontSize="11" width="100%" id="userNameField" color="black" paddingRight="0" text="1292" />
-				</mx:GridItem>
-				<mx:GridItem width="100%" height="100%">
-					<mx:TextInput fontSize="11" width="100%" id="passwordField" color="black"  displayAsPassword="true" keyUp="handleKeyUp(event)" text="969131" />
-				</mx:GridItem>
-			</mx:GridRow>
-		</mx:Grid>
-		<mx:HBox width="100%" horizontalAlign="right" top="150" right="20" left="20" >
-			<mx:Label fontSize="12" fontWeight="bold"  id="errorLabel" color="#FF9B26" />
-			<mx:Spacer width="100%" />
-			<mx:Button height="23" id="loginButton" label="Login" click="loginToServer()" />
-		</mx:HBox>
-
-	</mx:Canvas>
-	
-	<mx:Canvas top="0" left="0" right="0" width="100%" height="100%" styleName="appContainer" visible="false" id="mainDialog" includeInLayout="{mainDialog.visible}">
-		
-		<!-- The Window Header -->
-		<mx:Canvas top="0" left="0" right="0">
-	
-			<mx:Label text="UBS Demo" styleName="appTitle" left="22" verticalCenter="0"/>
-			
-			<mx:Label id="welcome" styleName="welcome" right="555" verticalCenter="0"/>
-			
-			<mx:Image source="@Embed('assets/male_user_gray_sm.png')" right="490" top="5" verticalCenter="0" toolTip="{welcome.text}"/>
-			
-			<mx:Image source="@Embed('assets/top_separator.png')" right="490.5" y="0"/>
-	
-		 	<mx:ButtonBar id="bb" right="285" height="29" itemClick="buttonBarClick(event)" verticalCenter="0" buttonWidth="40">
-				<mx:dataProvider>
-				<!--
-					<mx:Object icon="@Embed('assets/icon_home.png')" toolTip="Home"/>
-					<mx:Object icon="@Embed('assets/icon_account.png')" toolTip="Customers"/>
-					<mx:Object icon="@Embed('assets/icon_contact.png')" toolTip="Contacts"/>
-					<mx:Object icon="@Embed('assets/icon_opportunity.png')" toolTip="Money Transfers"/>
-					<mx:Object icon="@Embed('assets/icon_dashboard.png')" toolTip="Dashboard"/>
-				-->
-					<mx:Object icon="@Embed('assets/icon_opportunity.png')" toolTip="IM Demo" />				
-					<mx:Object icon="@Embed('assets/icon_contact.png')" toolTip="Video Demo" />
-					
-				</mx:dataProvider>
-			</mx:ButtonBar>
-			
-			<mx:Button icon="@Embed('assets/icon_plus.png')" width="31" height="29" click="newAccount()" verticalCenter="0" right="248"/>
-			
-			<mx:Image source="@Embed('assets/top_separator.png')" right="232.5" y="0"/>
-	
-			<mx:Image source="@Embed('assets/search.png')" right="82" verticalCenter="0"/>
-			<mx:TextInput id="searchStr" borderStyle="none" backgroundAlpha="0" width="110" right="101" verticalCenter="2" focusThickness="0" change="search()"
-				borderSkin="@Embed('assets/blank.png')"
-				keyDown="searchKeyDownHandler(event)"/>
-			
-			<mx:Image source="@Embed('assets/icon_close.png')" visible="{searchPopup.currentState == ''}" right="91" verticalCenter="0"
-				click="searchPopup.currentState = 'hidden'"/>
-
-			<mx:Image source="@Embed('assets/top_separator.png')" right="66.5" y="0"/>
-
-	
-			<mx:Button styleName="iconMinimize" verticalCenter="0" right="46" />
-			<mx:Button styleName="iconMaximize" verticalCenter="0" right="33" />
-			<mx:Button styleName="iconClose" verticalCenter="0" right="20" click="logout()" />
-
-	
-		</mx:Canvas>
-	
-		<mx:Box styleName="tabContainer"  backgroundSize="100%" top="62" left="14" right="14" bottom="28" paddingTop="1" paddingLeft="2" paddingBottom="2" paddingRight="2">
-			<lib:SuperTabNavigator id="tn" width="100%" height="100%" tabWidth="140"/>
-		</mx:Box>
-
-		<mx:HRule top="90" left="16" right="16" width="100%" height="1" strokeColor="#B9B9B9"/>
-		
-		<v:SearchPopup id="searchPopup" top="56" right="66"/>
-
-		<mx:Image source="@Embed('assets/icon_grip.png')" bottom="14" right="10" />
-
-	</mx:Canvas>
+]]>
+</mx:Script>	
 </mx:Application>
