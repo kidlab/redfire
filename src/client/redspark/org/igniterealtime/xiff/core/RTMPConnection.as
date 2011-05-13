@@ -8,6 +8,7 @@
  *     Sean Treadway <seant@oncotype.dk>
  *     Sean Voisen <sean@voisen.org>
  *     Mark Walters <mark@yourpalmark.com>
+ *     Dele Olajide <dele@olajide.net>
  *
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +39,6 @@ package org.igniterealtime.xiff.core
 	import flash.xml.XMLNode;
  			 			
 	import flash.net.NetConnection;
-	import flash.net.Responder;	
 	import flash.net.NetStream;
 	import flash.utils.ByteArray;
 	
@@ -56,9 +56,10 @@ package org.igniterealtime.xiff.core
 
 		public var netConnection:NetConnection = null;
 		private var xmppUrl:String = "rtmp:/xmpp";
+		private var digest:String = null;
 		
 				
-		public function RTMPConnection(xmppUrl:String = "rtmp:/xmpp")
+		public function RTMPConnection(xmppUrl:String = "rtmpe:/xmpp")
 		{
 			super();						
 			this.xmppUrl = xmppUrl;
@@ -66,8 +67,10 @@ package org.igniterealtime.xiff.core
 			configureRedfire();			
 		}
 		
-		private function configureRedfire():void {
-		
+		private function configureRedfire():void 
+		{
+			trace("configureRedfire");
+			
 			NetConnection.defaultObjectEncoding = flash.net.ObjectEncoding.AMF0;	
 			netConnection = new NetConnection();
 			netConnection.client = this;
@@ -76,16 +79,17 @@ package org.igniterealtime.xiff.core
 	    	}
 	    	
 
-		private function netStatus (evt:NetStatusEvent ):void {		 
-
+		private function netStatus (evt:NetStatusEvent ):void 
+		{		 
+			trace("netStatus " + evt.info.code);
+			
 			switch(evt.info.code) {
 				
 				case "NetConnection.Connect.Success":
 					active = true;	
 					dispatchEvent( new ConnectionSuccessEvent() );	
 					
-					var myResult:Responder = new Responder(this.onResult);
-					netConnection.call("xmppConnect", myResult, username, password, resource);
+					netConnection.call("xmppConnect", null, username, password, resource);
 					
 					break;
 		
@@ -107,17 +111,6 @@ package org.igniterealtime.xiff.core
 			}			 
 		} 
 
-		private function onResult (loginOK:Boolean): void 
-		{
-			if (loginOK)
-			{
-				dispatchEvent( new LoginEvent() );
-
-			} else {
-
-				dispatchError( "not-authorized", "Not Authorized", "auth", 401 );
-			}
-		}
 					
 		private function asyncErrorHandler(event:AsyncErrorEvent):void {
            		//trace("AsyncErrorEvent: " + event);
@@ -130,39 +123,47 @@ package org.igniterealtime.xiff.core
 	    
 	    	override protected function sendXML( someData:* ):void
 		{
-			var xmlData:String;
-			
-			if (someData is XML) 
-			{
-				xmlData =  (someData as XML).toXMLString();			
+			if (digest != null)
+			{		
+				var xmlData:String;
 
-			} else if (someData is String) {
+				if (someData is XML) 
+				{
+					xmlData =  (someData as XML).toXMLString();			
 
-				xmlData =  someData;
-			
-			} else {
-			
-				xmlData = someData.toString();			
+				} else if (someData is String) {
+
+					xmlData =  someData;
+
+				} else {
+
+					xmlData = someData.toString();			
+				}
+
+				netConnection.call("xmppSend", null, digest, xmlData);
+
+				var event:OutgoingDataEvent = new OutgoingDataEvent();			
+				var byteData:ByteArray = new ByteArray();
+				byteData.writeUTFBytes(xmlData);
+				event.data = byteData;
+
+				dispatchEvent( event );
 			}
-
-			netConnection.call("xmppSend", null, xmlData);
-				
-			var event:OutgoingDataEvent = new OutgoingDataEvent();			
-			var byteData:ByteArray = new ByteArray();
-			byteData.writeUTFBytes(xmlData);
-			event.data = byteData;
-				
-			dispatchEvent( event );
 		}
 		
 		override public function disconnect():void
 		{
-			if( isActive() ) {
-				netConnection.close();
+			if( isActive() ) 
+			{
+				if (digest != null)
+				{			
+					netConnection.call("xmppDisconnect", null, digest);
+				}
 				active = false;
 				loggedIn = false;
 				var event:DisconnectionEvent = new DisconnectionEvent();
 				dispatchEvent(event);
+				netConnection.close();				
 			}
 		}
 		
@@ -185,9 +186,22 @@ package org.igniterealtime.xiff.core
 			disconnect();
 			connect();
 		}		
+
+		public function xmppConnect (digest:String, resource:String):* 
+		{
+			if (digest != null)
+			{
+				this.digest = digest;
+				dispatchEvent( new LoginEvent() );
+
+			} else {
+
+				dispatchError( "not-authorized", "Not Authorized", "auth", 401 );
+			}
+		}
 			
 			
-		public function xmppRecieve(rawXML:String):* 
+		public function xmppRecieve(rawXML:String, resource:String):* 
 		{			
 			var xmlData:XMLDocument = new XMLDocument();
 			xmlData.ignoreWhite = ignoreWhitespace;

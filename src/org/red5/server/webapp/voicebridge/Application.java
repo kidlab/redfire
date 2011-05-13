@@ -66,6 +66,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
     private Map< String, LocalClientSession > sessions 				= new ConcurrentHashMap<String, LocalClientSession>();
     private Map< String, IServiceCapableConnection > publishers 	= new ConcurrentHashMap<String, IServiceCapableConnection>();
+    private Map< String, String > digests 							= new ConcurrentHashMap<String, String>();
 
 
 
@@ -153,6 +154,12 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 		CallHandler.shutdown();
 		config.terminate();
+
+        for (LocalClientSession session : sessions.values())
+        {
+			session.close();
+			session = null;
+		}
     }
 
 
@@ -181,9 +188,14 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
     public void appLeave( IClient client, IScope scope ) {
 
         IConnection conn = Red5.getConnectionLocal();
+		IServiceCapableConnection thisService = (IServiceCapableConnection) conn;
+
         loginfo( "Red5XMPP Client leaving app " + client.getId() );
 
-        xmppDisconnect();
+        if (digests.containsKey(client.getId()))
+        {
+			xmppDisconnect(digests.get(client.getId()));
+		}
     }
 
     @Override
@@ -213,62 +225,77 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 
 
-    public boolean xmppConnect(String username, String password, String resource)
+    public String xmppConnect(String username, String password, String peerId)
     {
 		IConnection conn = Red5.getConnectionLocal();
-        String streamID = conn.getClient().getId();
 		IServiceCapableConnection service = (IServiceCapableConnection) conn;
 
-        loginfo( "Red5XMPP xmppConnect " + streamID + " service " + service );
+		String digest = AuthFactory.createDigest(username, password);
 
-        RedfireConnection connection = new RedfireConnection(service);
-        LocalClientSession session = SessionManager.getInstance().createClientSession(connection, new BasicStreamID(streamID));
-        connection.setRouter(new SessionPacketRouter(session));
+        loginfo( "Red5XMPP xmppConnect " + username + " service " + service + " digest " + digest);
 
-		try {
-			//AuthToken authToken = new AuthToken("1291");
+        if (sessions.containsKey(digest))
+        {
+			LocalClientSession session = sessions.get(digest);
 
-			AuthToken authToken = AuthFactory.authenticate(username, password);
-			session.setAuthToken(authToken, resource);
-			//session.setPresence(new Presence());
-			sessions.put(streamID, session);
+			try {
+				RedfireConnection connection = (RedfireConnection) session.getConnection();
+				connection.setService(service, peerId);
+				service.invoke("xmppConnect", new Object[] {digest, peerId});
+				return digest;
 
-			return true;
+			} catch (Exception e) {
+				logerror("Red5XMPP xmppConnect " + e);
+				return null;
+			}
 
-		} catch (Exception e) {
+		} else {
 
-			return false;
+			RedfireConnection connection = new RedfireConnection(service, peerId, digest);
+			LocalClientSession session = SessionManager.getInstance().createClientSession(connection, new BasicStreamID(peerId));
+			connection.setRouter(new SessionPacketRouter(session));
+
+			try {
+				AuthToken authToken = AuthFactory.authenticate(username, password);
+				session.setAuthToken(authToken, peerId);
+				sessions.put(digest, session);
+				service.invoke("xmppConnect", new Object[] {digest, peerId});
+
+				if (digests.containsKey(conn.getClient().getId()) == false)
+				{
+					digests.put(conn.getClient().getId(), digest);
+				}
+
+
+				return digest;
+
+			} catch (Exception e) {
+				logerror("Red5XMPP xmppConnect " + e);
+				return null;
+			}
 		}
     }
 
-    public void xmppDisconnect()
+    public void xmppDisconnect(String digest)
     {
-		IConnection conn = Red5.getConnectionLocal();
-        String streamID = conn.getClient().getId();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
+        loginfo( "Red5XMPP xmppDisconnect " + digest);
 
-        loginfo( "Red5XMPP xmppDisconnect " + streamID + " service " + service );
-
-        if (sessions.containsKey(streamID))
+        if (sessions.containsKey(digest))
         {
-			LocalClientSession session = sessions.remove(streamID);
+			LocalClientSession session = sessions.remove(digest);
 
 			session.close();
 			session = null;
 		}
     }
 
-    public void xmppSend(String xml)
+    public void xmppSend(String digest, String xml)
     {
-		IConnection conn = Red5.getConnectionLocal();
-        String streamID = conn.getClient().getId();
-		IServiceCapableConnection service = (IServiceCapableConnection) conn;
-
         loginfo( "Red5XMPP xmppSend \n" + xml);
 
-        if (sessions.containsKey(streamID))
+        if (sessions.containsKey(digest))
         {
-			LocalClientSession session = sessions.get(streamID);
+			LocalClientSession session = sessions.get(digest);
 
 			try {
 				RedfireConnection connection = (RedfireConnection) session.getConnection();
@@ -2905,11 +2932,35 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
         private IServiceCapableConnection service;
         private SessionPacketRouter router;
+        private String peerId;
+        private String digest;
 
+        public RedfireConnection(IServiceCapableConnection service, String peerId, String digest)
+        {
+            this.service = service;
+            this.peerId = peerId;
+			this.digest = digest;
+        }
 
 		public SessionPacketRouter getRouter()
 		{
 			return router;
+		}
+
+		public IServiceCapableConnection getService()
+		{
+			return service;
+		}
+
+		public String getDigest()
+		{
+			return digest;
+		}
+
+		public void setService(IServiceCapableConnection service, String peerId)
+		{
+			this.service = service;
+            this.peerId = peerId;
 		}
 
 		public void setRouter(SessionPacketRouter router)
@@ -2917,14 +2968,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			this.router = router;
 		}
 
-        public RedfireConnection(IServiceCapableConnection service) {
-            this.service = service;
-        }
-
         public void closeVirtualConnection()
         {
             loginfo("RedfireConnection - close ");
             service.close();
+			xmppDisconnect(digest);
         }
 
         public byte[] getAddress() throws UnknownHostException {
@@ -2953,7 +3001,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
             loginfo("RedfireConnection - deliverRawText \n" + text);
 
 			if (service != null) {
-				service.invoke("xmppRecieve", new Object[] {text});
+				service.invoke("xmppRecieve", new Object[] {text, peerId});
 			}
         }
 

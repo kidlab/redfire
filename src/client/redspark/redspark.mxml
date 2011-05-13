@@ -33,19 +33,25 @@
 
 	private function initApp():void
 	{
-		ExternalInterface.addCallback("windowCloseEvent", logout);
+		trace("initApp: ");
+	
+		ExternalInterface.addCallback("logout", logout);
 		ExternalInterface.addCallback("login", login);	
 		
 		username 	= FlexGlobals.topLevelApplication.parameters.username;		
 		password 	= FlexGlobals.topLevelApplication.parameters.password;	
 		connectiontype 	= FlexGlobals.topLevelApplication.parameters.connectionType;
 		
-		connectSetup();			
+		connectSetup();	
+		
+		ExternalInterface.call("ready");		
 	}
 
 
 	public function login():void 
-	{		
+	{
+		trace("login: ");
+	
 		connectiontype = ExternalInterface.call("getConnectionType");
 
 		if (connectiontype == "socket") {
@@ -58,6 +64,8 @@
 
 	public function logout():void
 	{
+		trace("logout: ");
+	
 		// Send an unavilable presence
 		//var recipient:EscapedJID = new EscapedJID(connection.domain);
 		//var unavailablePresence:Presence = new Presence(recipient, null, Presence.TYPE_UNAVAILABLE, null, "Logged out");
@@ -68,6 +76,8 @@
 
 	private function connectSetup():void 
 	{  
+		trace("connectSetup: ");
+		
 		switch(connectiontype)
 		{
 			case "http":
@@ -81,7 +91,11 @@
 				break;
 
 			case "rtmp":
-				connection = new RTMPConnection("rtmpe:/xmpp");			
+				connection = new RTMPConnection();			
+				break;
+
+			case "rtmfp":
+				connection = new RTMFPConnection();			
 				break;
 
 			case "tls":
@@ -119,6 +133,8 @@
 
 		connection.addEventListener(LoginEvent.LOGIN, function( event:LoginEvent):void 
 		{
+			trace("addEventListener: LoginEvent.LOGIN " + event);
+			
 			displayName = connection.username;
 		
 			var recipient:EscapedJID = new EscapedJID(connection.domain);
@@ -148,7 +164,9 @@
 
 		connection.addEventListener(XIFFErrorEvent.XIFF_ERROR, function(event:XIFFErrorEvent):void 
 		{
-			showErrorText(event.errorCondition + " " + event.errorMessage);
+			trace("addEventListener: XIFFErrorEvent.XIFF_ERROR " + event);
+		
+			ExternalInterface.call("error", event.errorCondition, event.errorMessage); 
 		});
 
 		connection.addEventListener(DisconnectionEvent.DISCONNECT, function(event:DisconnectionEvent):void 
@@ -158,6 +176,8 @@
 		
 		connection.addEventListener(MessageEvent.MESSAGE, function(event:MessageEvent):void 
 		{
+			trace("addEventListener: MessageEvent.MESSAGE " + event);
+		
 			var message:Message = event.data as Message;						
 			var xNode:XMLNode = message.getNode().firstChild;
 
@@ -318,29 +338,27 @@
 	}
 
 
-	public function showErrorText(text:String):void 
-	{
-		
-	}
-
-
 	public function handleVCard(card:VCard):void 
 	{	
 		if (card != null)
 		{
 			var nickname:String = card.nickname;
+			var firstName:String = "";
+			var lastName:String = "";			
 			
 			if (card.name != null)
 			{
-				var firstName:String = card.name.given;
-				var lastName:String = card.name.family;
+				firstName = card.name.given;
+				lastName = card.name.family;
 				
 				if(firstName && firstName.length > 0 && lastName && lastName.length > 0)
-					displayName = firstName + " " + lastName;				
+					displayName = firstName + " " + lastName;									
 			}
 
 			if(nickname && nickname.length > 0)
 				displayName = nickname;
+				
+			ExternalInterface.call("displayName", displayName, firstName, lastName);								
 		}
 		
 	}	

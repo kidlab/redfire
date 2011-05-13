@@ -69,6 +69,10 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 			{
 				public void actionPerformed(ActionEvent event)
 				{
+					int width = 670;
+					int height = 290;
+					String title = room.getRoomname();
+
 					//room.getChatInputEditor().requestFocusInWindow();
 
 					String sessionID = SparkManager.getConnection().getConnectionID();
@@ -82,16 +86,23 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 					if ("groupchat".equals(room.getChatType().toString()))
 					{
+						width = 1064;
+						height = 660;
+
 						String others = "";
 						Collection<String> participants = ((GroupChatRoom)room).getParticipants();
 
 						for (String participant : participants)
 						{
 							Log.warning("Red5ChatRoomDecorator: found participant " + participant);
-							others = others + "$" + java.net.URLEncoder.encode(getResource(participant));
+
+							if ("".equals(others))
+								others = java.net.URLEncoder.encode(getResource(participant));
+							else
+								others = others + "$" + java.net.URLEncoder.encode(getResource(participant));
 						}
 
-						newUrl = url + "/redfire/video/videoConf.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(nickName);
+						newUrl = url + "/redfire/video/redfire_video.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(nickName);
 
 						for (String participant : participants)
 						{
@@ -99,16 +110,20 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 							if (member.equals(nickName) == false)
 							{
-								String youURL = url + "/redfire/video/videoConf.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(member);
+								String youURL = url + "/redfire/video/redfire_video.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(member);
 								Message message = new Message();
 								message.setType(Message.Type.chat);
 
-								sendInvite(message, roomJID + "/" + getResource(participant), youURL);
+								sendInvite(message, roomJID + "/" + getResource(participant), youURL, width, height);
 							}
 						}
 
 
 					} else {
+
+						width = 670;
+						height = 290;
+
 						String youJID = ((ChatRoomImpl)room).getParticipantJID();
 						String you = getNode(youJID);
 
@@ -117,13 +132,13 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 						Message message = new Message();
 						message.setType(Message.Type.chat);
-						sendInvite(message, youJID, youURL);
+						sendInvite(message, youJID, youURL, width, height);
 
 						Log.warning("Red5ChatRoomDecorator: red5Button " + youURL);
 
 					}
 
-					BareBonesBrowserLaunch.openURL(newUrl);
+					BareBonesBrowserLaunch.openURL(width, height, newUrl, title);
 				}
 			});
 
@@ -153,7 +168,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 					else
 						message.setType(Message.Type.chat);
 
-					sendInvite(message, roomJID, newUrl);
+					sendInvite(message, roomJID, newUrl, 1064, 818);
 
 					Log.warning("Red5ChatRoomDecorator: screenButton " + newUrl);
 				}
@@ -212,7 +227,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 	}
 
 
-	private void sendInvite(Message message, String jid, String url)
+	private void sendInvite(Message message, String jid, String url, int width, int height)
 	{
 		message.setTo(jid);
 		message.setBody(url);
@@ -220,6 +235,9 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 		RedfireExtension redfireExtension = new RedfireExtension("redfire-invite", "http://redfire.4ng.net/xmlns/redfire-invite");
 		redfireExtension.setValue("sessionID", SparkManager.getConnection().getConnectionID());
 		redfireExtension.setValue("roomID", room.getRoomTitle());
+		redfireExtension.setValue("width",  String.valueOf(width));
+		redfireExtension.setValue("height", String.valueOf(height));
+
 		message.addExtension(redfireExtension);
 
 		SparkManager.getConnection().sendPacket(message);

@@ -46,6 +46,7 @@ import org.jivesoftware.smack.packet.Message.Type;
 import org.redfire.screen.*;
 
 
+
 public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, PacketFilter
 {
 	private org.jivesoftware.spark.ChatManager chatManager;
@@ -53,7 +54,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 	private UserManager userManager;
 
 	private String protocol = "http://";
-	private String red5server = SparkManager.getSessionManager().getServerAddress();
+	private String red5server = "localhost";
 	private String red5port = "7070";
 	private String url = protocol + red5server + ":" + red5port;
 	private String popup = "false";
@@ -70,6 +71,9 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
     {
 		chatManager = SparkManager.getChatManager();
 		userManager = SparkManager.getUserManager();
+
+		red5server = SparkManager.getConnection().getServiceName();
+		url = protocol + red5server + ":" + red5port;
 
     	Properties props = new Properties();
 
@@ -126,6 +130,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		chatManager.addChatRoomListener(this);
 
 		SparkManager.getConnection().addPacketListener(this, this);
+
     }
 
 
@@ -200,11 +205,12 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 					String xml = redfireExtension.toXML();
 
 					String roomID = getTag(xml, "roomID");
+					int width = Integer.parseInt(getTag(xml, "width"));
+					int height = Integer.parseInt(getTag(xml, "height"));
 
 					Log.warning("RedfireExtension  invite recieved " + roomID);
 
-					if ("true".equals(popup)) BareBonesBrowserLaunch.openURL(message.getBody());
-
+					if ("true".equals(popup)) BareBonesBrowserLaunch.openURL(width, height, message.getBody(), roomID);
 				}
 			}
 		}

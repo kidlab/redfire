@@ -26,7 +26,7 @@
   * Supports: Mac OS X, GNU/Linux, Unix, Windows XP/Vista/7<br>
   * Example Usage:<code><br> &nbsp; &nbsp;
   *    String url = "http://www.google.com/";<br> &nbsp; &nbsp;
-  *    BareBonesBrowserLaunch.openURL(url);<br></code>
+  *    BareBonesBrowserLaunch.openURL(int width, int height, String url, String title);<br></code>
   * Latest Version: <a href="http://www.centerkey.com/java/browser/">www.centerkey.com/java/browser</a><br>
   * Author: Dem Pilafian<br>
   * Public Domain Software -- Free to Use as You Like
@@ -36,8 +36,13 @@
 
 package org.jivesoftware.spark.plugin.red5;
 
-import javax.swing.JOptionPane;
-import java.util.Arrays;
+import java.awt.BorderLayout;
+import java.awt.event.*;
+import javax.swing.*;
+import java.util.*;
+
+import org.jivesoftware.spark.SparkManager;
+import org.jivesoftware.spark.component.browser.*;
 
 
 public class BareBonesBrowserLaunch {
@@ -45,21 +50,79 @@ public class BareBonesBrowserLaunch {
    static final String[] browsers = { "google-chrome", "firefox", "opera","epiphany", "konqueror", "conkeror", "midori", "kazehakase", "mozilla" };
    static final String errMsg = "Error attempting to launch web browser";
 
+   static final Map<String, JFrame> windows = new HashMap<String, JFrame>();
+   static final Map<String, BrowserViewer> viewers = new HashMap<String, BrowserViewer>();
+
+   private static void openBrowserURL(int width, int height, String url, String title)
+   {
+	   	if (windows.containsKey(title))
+	   	{
+			JFrame frame = windows.get(title);
+			BrowserViewer viewer = viewers.get(title);
+
+			frame.setSize(width, height);
+			viewer.loadURL(url);
+
+		} else {
+
+			BrowserViewer viewer = new NativeBrowserViewer();
+			viewer.initializeBrowser();
+
+			JFrame frame = new JFrame(title);
+
+			frame.addWindowListener(new java.awt.event.WindowAdapter() {
+
+				public void windowClosing(WindowEvent winEvt)
+				{
+					JFrame frame = (JFrame) winEvt.getWindow();
+					String title = frame.getTitle();
+
+					frame.dispose();
+					windows.remove(title);
+
+					BrowserViewer viewer = viewers.get(title);
+					viewer.loadURL("about:blank");
+					viewers.remove(title);
+				}
+			});
+
+			frame.setIconImage(SparkManager.getMainWindow().getIconImage());
+			frame.getContentPane().setLayout(new BorderLayout());
+			frame.getContentPane().add(viewer, BorderLayout.CENTER);
+			frame.setVisible(true);
+			frame.pack();
+			frame.setSize(width, height);
+			viewer.loadURL(url);
+
+			windows.put(title, frame);
+			viewers.put(title, viewer);
+		}
+   }
+
    /**
     * Opens the specified web page in the user's default browser
     * @param url A web address (URL) of a web page (ex: "http://www.google.com/")
     */
 
-   public static void openURL(String url)
+   public static void openURL(int width, int height, String url, String title)
    {
       try {
 
-		  //attempt to use Desktop library from JDK 1.6+
+		String OS = System.getProperty("os.name").toLowerCase();
 
-         Class<?> d = Class.forName("java.awt.Desktop");
-         d.getDeclaredMethod("browse", new Class[] {java.net.URI.class}).invoke(d.getDeclaredMethod("getDesktop").invoke(null), new Object[] {java.net.URI.create(url)});
+		if (OS.indexOf("windows") > -1)
+		{
+			openBrowserURL(width, height, url, title);
 
-         //above code mimicks:  java.awt.Desktop.getDesktop().browse()
+		} else {
+
+		  	//attempt to use Desktop library from JDK 1.6+
+
+         	Class<?> d = Class.forName("java.awt.Desktop");
+         	d.getDeclaredMethod("browse", new Class[] {java.net.URI.class}).invoke(d.getDeclaredMethod("getDesktop").invoke(null), new Object[] {java.net.URI.create(url)});
+
+         	//above code mimicks:  java.awt.Desktop.getDesktop().browse()
+	 	}
 
      } catch (Exception ignore) {  //library not available or failed
 
@@ -67,13 +130,15 @@ public class BareBonesBrowserLaunch {
 
          try {
 
-            if (osName.startsWith("Mac OS")) {
+            if (osName.startsWith("Mac OS"))
+            {
                Class.forName("com.apple.eio.FileManager").getDeclaredMethod("openURL", new Class[] {String.class}).invoke(null, new Object[] {url});
-               }
-            else if (osName.startsWith("Windows"))
+
+            }  else if (osName.startsWith("Windows")) {
                Runtime.getRuntime().exec("rundll32 url.dll,FileProtocolHandler " + url);
 
-            else { //assume Unix or Linux
+
+            } else { //assume Unix or Linux
                String browser = null;
 
                for (String b : browsers)

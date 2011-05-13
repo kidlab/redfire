@@ -1,22 +1,25 @@
 <html>
 <head>
-<title>ScreenViewer</title>
+<title>Redfire Video</title>
 	<script type="text/javascript" src="swfobject.js"></script>
 	<script type="text/javascript">
 
-	var flexStream = null;
+	var redfireVideo = null;
 
 	function setupApp()
 	{
-		flexStream = document.getElementById("flexStreamDIV");
+		redfireVideo = document.getElementById("redfireVideoDIV");
 
 	}
 
 	function stopApp()
 	{
-		if (flexStream != null)
+		if (redfireVideo != null)
 		{
-			flexStream.windowCloseEvent();
+			try {
+				redfireVideo.windowCloseEvent();
+
+			} catch (error) {}
 		}
 	}
 
@@ -60,21 +63,23 @@ function getPageParameter(parameterName, defaultValue) {
 	</script>
 </head>
 <body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupApp()" onUnload="stopApp()">
-<div id="flexStreamDIV"></div>
+<div id="redfireVideoDIV"></div>
 <script type="text/javascript">
 
 		var stream 		= getPageParameter('me', 'ME');
 		var others 		= getPageParameter('others', 'ME$ME$ME$ME$ME$ME$ME$ME$ME$ME$ME$ME')
-		var url 		= getPageParameter('url', 'rtmp:/oflaDemo');
+		var rtmpUrl 	= getPageParameter('rtmpUrl', 'rtmp:/oflaDemo');
+		var rtmfpUrl	= getPageParameter('rtmfpUrl', 'rtmfp://p2p.rtmfp.net/e423fa356c187078552b994c-004820ca784f/');
 		var key 		= getPageParameter('key', 'KEY');
 
-		fo = new SWFObject("flexStream.swf", "flexStream", "100%", "100%", "10");
+		fo = new SWFObject("redfire_video.swf", "redfireVideo", "100%", "100%", "10");
 		fo.addParam("swLiveConnect", "true");
-		fo.addParam("name", "flexStream");
+		fo.addParam("name", "redfireVideo");
 
-		fo.addVariable("rtmpUrl", url);
-		fo.addVariable("key", key);
+		fo.addVariable("rtmpUrl", rtmpUrl);
+		fo.addVariable("rtmfpUrl", rtmfpUrl);
 		fo.addVariable("stream", stream);
+		fo.addVariable("key", key);
 
 		var users = others.split("$")
 		var sizeI = users.length
@@ -88,7 +93,7 @@ function getPageParameter(parameterName, defaultValue) {
 			fo.addVariable("stream" + i, users[i]);
 		}
 
-		fo.write("flexStreamDIV");
+		fo.write("redfireVideoDIV");
 </script>
 </body>
 </html>

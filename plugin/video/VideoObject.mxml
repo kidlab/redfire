@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Canvas 
+	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	backgroundColor="#C0C0C0" 	     
+	verticalScrollPolicy="off"
+	horizontalScrollPolicy="off">
+	
+<mx:Script>
+	<![CDATA[
+
+	import flash.media.Video;
+	import mx.core.UIComponent;
+
+	public var _video:flash.media.Video;
+
+	public function get video():Video {
+		return _video;
+	}
+
+	public function set video(v:Video):void 
+	{		
+		if (_video != null) uic.removeChild(_video);
+		
+		_video = v;		
+		uic.addChild(_video);		
+	}
+		
+	]]>
+</mx:Script>
+	
+<mx:UIComponent x="0" y="0" id="uic" />
+<mx:Label x="0" y="0" id="caption" color="0xffff00" />
+<mx:Label x="0" y="10" id="action" color="0xffff00" />	
+<mx:Label x="0" y="175" id="mic" color="0xffff00" />
+<mx:Label x="200" y="175" id="cam" color="0xffff00" />		
+</mx:Canvas>
