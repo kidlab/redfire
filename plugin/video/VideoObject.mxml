@@ -2,6 +2,8 @@
 
 <mx:Canvas 
 	xmlns:mx="http://www.adobe.com/2006/mxml" 
+	height="100%" 
+	width="100%"
 	backgroundColor="#C0C0C0" 	     
 	verticalScrollPolicy="off"
 	horizontalScrollPolicy="off">
@@ -12,7 +14,10 @@
 	import flash.media.Video;
 	import mx.core.UIComponent;
 
-	public var _video:flash.media.Video;
+	[Bindable] public var twoWay:Boolean = false;
+	
+	private var _video:flash.media.Video;
+	private var _webcam:flash.media.Video;	
 
 	public function get video():Video {
 		return _video;
@@ -25,13 +30,38 @@
 		_video = v;		
 		uic.addChild(_video);		
 	}
+
+	public function get webcam():Video 
+	{
+		if (twoWay)
+			return _webcam;
+		else
+			return _video;
+	}
+
+	public function set webcam(v:Video):void 
+	{
+		if (twoWay)
+		{
+			if (_webcam != null) uic2.removeChild(_webcam);
+
+			_webcam = v;		
+			uic2.addChild(_webcam);				
+			
+		} else {
 		
+			video = v;
+		}
+	}
+	
 	]]>
 </mx:Script>
 	
-<mx:UIComponent x="0" y="0" id="uic" />
+<mx:UIComponent x="0" y="0" id="uic" height="100%" width="100%"/>
+<mx:UIComponent x="{uic.width-160}" y="{uic.height-120}" id="uic2" width="160" height="120" visible="{twoWay}" />
+
 <mx:Label x="0" y="0" id="caption" color="0xffff00" />
 <mx:Label x="0" y="10" id="action" color="0xffff00" />	
-<mx:Label x="0" y="175" id="mic" color="0xffff00" />
-<mx:Label x="200" y="175" id="cam" color="0xffff00" />		
+<mx:Label x="0" y="{uic.height - 23}" id="mic" color="0xffff00" />
+<mx:Label x="{uic.width - 60}" y="{uic.height - 23}" id="cam" color="0xffff00" />	
 </mx:Canvas>

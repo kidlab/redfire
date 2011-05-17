@@ -69,15 +69,15 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 			{
 				public void actionPerformed(ActionEvent event)
 				{
-					int width = 670;
-					int height = 290;
+					int width = 0;
+					int height = 0;
 					String title = room.getRoomname();
 
 					//room.getChatInputEditor().requestFocusInWindow();
 
 					String sessionID = SparkManager.getConnection().getConnectionID();
 
-					String jid = SparkManager.getSessionManager().getJID();
+					String jid = org.jivesoftware.smack.util.StringUtils.parseBareAddress(SparkManager.getSessionManager().getJID());
 					String me = getNode(jid);
 					String roomJID = room.getRoomname();
 					String nickName = SparkManager.getUserManager().getNickname();
@@ -86,7 +86,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 					if ("groupchat".equals(room.getChatType().toString()))
 					{
-						width = 1064;
+						width = 1084;
 						height = 660;
 
 						String others = "";
@@ -111,28 +111,23 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 							if (member.equals(nickName) == false)
 							{
 								String youURL = url + "/redfire/video/redfire_video.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(member);
-								Message message = new Message();
-								message.setType(Message.Type.chat);
-
-								sendInvite(message, roomJID + "/" + getResource(participant), youURL, width, height);
+								sendInvite(" is offering to share a video in this conference", roomJID + "/" + member, youURL, width, height, roomJID);
 							}
 						}
 
 
 					} else {
 
-						width = 670;
-						height = 290;
+						width = 680;
+						height = 520;
 
 						String youJID = ((ChatRoomImpl)room).getParticipantJID();
 						String you = getNode(youJID);
 
-						newUrl = url + "/redfire/video/video320x240.html?me=" + me + "&you=" + you + "&key=" + sessionID;
-						String youURL = url + "/redfire/video/video320x240.html?you=" + me + "&me=" + you + "&key=" + sessionID;
+						newUrl = url + "/redfire/video/redfire_2way.html?me=" + me + "&you=" + you + "&key=" + sessionID;
+						String youURL = url + "/redfire/video/redfire_2way.html?you=" + me + "&me=" + you + "&key=" + sessionID;
 
-						Message message = new Message();
-						message.setType(Message.Type.chat);
-						sendInvite(message, youJID, youURL, width, height);
+						sendInvite(" is offering to share audio and video in this chat", youJID, youURL, width, height, jid);
 
 						Log.warning("Red5ChatRoomDecorator: red5Button " + youURL);
 
@@ -156,19 +151,32 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 					screenShare.createWindow();
 
+					String jid = org.jivesoftware.smack.util.StringUtils.parseBareAddress(SparkManager.getSessionManager().getJID());
 					String screenSessionID = SparkManager.getConnection().getConnectionID();
 					String playStream = "screen_share_" + screenSessionID;
 					String newUrl = url + "/redfire/screen/screenviewer.html?stream=" + playStream;
 					String roomJID = room.getRoomname();
-
-					Message message = new Message();
+					String nickName = SparkManager.getUserManager().getNickname();
 
 					if ("groupchat".equals(room.getChatType().toString()))
-						message.setType(Message.Type.groupchat);
-					else
-						message.setType(Message.Type.chat);
+					{
+						Collection<String> participants = ((GroupChatRoom)room).getParticipants();
 
-					sendInvite(message, roomJID, newUrl, 1064, 818);
+						for (String participant : participants)
+						{
+							String member = getResource(participant);
+
+							if (member.equals(nickName) == false)
+							{
+								sendInvite(" is offering to share their desktop in this conference", roomJID  + "/" + member, newUrl, 1064, 818, roomJID);
+							}
+						}
+
+					} else {
+						String youJID = ((ChatRoomImpl)room).getParticipantJID();
+						sendInvite(" is offering to share their desktop in this chat", youJID, newUrl, 1064, 818, jid);
+
+					}
 
 					Log.warning("Red5ChatRoomDecorator: screenButton " + newUrl);
 				}
@@ -227,19 +235,20 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 	}
 
 
-	private void sendInvite(Message message, String jid, String url, int width, int height)
+	private void sendInvite(String prompt, String jid, String url, int width, int height, String roomId)
 	{
-		message.setTo(jid);
-		message.setBody(url);
-
-		RedfireExtension redfireExtension = new RedfireExtension("redfire-invite", "http://redfire.4ng.net/xmlns/redfire-invite");
+		Message message2 = new Message();
+		message2.setTo(jid);
+		message2.setType(Message.Type.chat);
+		message2.setBody(url);
+		RedfireExtension redfireExtension = new RedfireExtension();
 		redfireExtension.setValue("sessionID", SparkManager.getConnection().getConnectionID());
-		redfireExtension.setValue("roomID", room.getRoomTitle());
 		redfireExtension.setValue("width",  String.valueOf(width));
 		redfireExtension.setValue("height", String.valueOf(height));
-
-		message.addExtension(redfireExtension);
-
-		SparkManager.getConnection().sendPacket(message);
+		redfireExtension.setValue("nickname", SparkManager.getUserManager().getNickname());
+		redfireExtension.setValue("roomId", roomId);
+		redfireExtension.setValue("prompt", prompt);
+		message2.addExtension(redfireExtension);
+		SparkManager.getConnection().sendPacket(message2);
 	}
 }

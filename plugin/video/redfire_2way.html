@@ -1,0 +1,88 @@
+<html>
+<head>
+<title>Redfire 2 Way Video</title>
+	<script type="text/javascript" src="swfobject.js"></script>
+	<script type="text/javascript">
+
+	var redfireVideo = null;
+
+	function setupApp()
+	{
+		redfireVideo = document.getElementById("redfireVideoDIV");
+
+	}
+
+	function stopApp()
+	{
+		if (redfireVideo != null)
+		{
+			try {
+				redfireVideo.windowCloseEvent();
+
+			} catch (error) {}
+		}
+	}
+
+function getParameter(string, parm, delim) {
+
+     if (string.length == 0) {
+     	return '';
+     }
+
+	 var sPos = string.indexOf(parm + "=");
+
+     if (sPos == -1) {return '';}
+
+     sPos = sPos + parm.length + 1;
+     var ePos = string.indexOf(delim, sPos);
+
+     if (ePos == -1) {
+     	ePos = string.length;
+     }
+
+     return unescape(string.substring(sPos, ePos));
+}
+
+function getPageParameter(parameterName, defaultValue) {
+
+	var s = self.location.search;
+
+	if ((s == null) || (s.length < 1)) {
+		return defaultValue;
+	}
+
+	s = getParameter(s, parameterName, '&');
+
+	if ((s == null) || (s.length < 1)) {
+		s = defaultValue;
+	}
+
+	return s;
+}
+
+	</script>
+</head>
+<body topmargin="0" leftmargin="0" bottommargin="0" rightmargin="0" onload="setupApp()" onUnload="stopApp()">
+<div id="redfireVideoDIV"></div>
+<script type="text/javascript">
+
+		var streamMe	= getPageParameter('me', 'ME');
+		var streamYou	= getPageParameter('you', 'YOU')
+		var rtmpUrl 	= getPageParameter('rtmpUrl', 'rtmp:/oflaDemo');
+		var rtmfpUrl	= getPageParameter('rtmfpUrl', 'rtmfp://p2p.rtmfp.net/e423fa356c187078552b994c-004820ca784f/');
+		var key 		= getPageParameter('key', 'KEY');
+
+		fo = new SWFObject("redfire_2way.swf", "redfireVideo", "100%", "100%", "10");
+		fo.addParam("swLiveConnect", "true");
+		fo.addParam("name", "redfireVideo");
+
+		fo.addVariable("rtmpUrl", rtmpUrl);
+		fo.addVariable("rtmfpUrl", rtmfpUrl);
+		fo.addVariable("streamMe", streamMe);
+		fo.addVariable("streamYou", streamYou);
+		fo.addVariable("key", key);
+
+		fo.write("redfireVideoDIV");
+</script>
+</body>
+</html>

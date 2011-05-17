@@ -25,27 +25,22 @@ import org.jivesoftware.smack.packet.*;
 
 public class RedfireExtension implements PacketExtension {
 
-    private String elementName;
-    private String namespace;
+    public static final String elementName = "redfire-invite";
+    public static final String namespace = "http://redfire.4ng.net/xmlns/redfire-invite";
+
     private String sessionID;
 
-    private Map<String, String> map;
 
-    public RedfireExtension(String elementName, String namespace)
-    {
-        this.elementName = elementName;
-        this.namespace = namespace;
-    }
-
-    public String getElementName()
-    {
+    public String getElementName() {
         return elementName;
     }
 
-    public String getNamespace()
-    {
+    public String getNamespace() {
         return namespace;
     }
+
+    private Map<String, String> map;
+
 
     public String toXML() {
         StringBuffer buf = new StringBuffer();

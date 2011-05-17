@@ -21,12 +21,15 @@
 
  package org.jivesoftware.spark.plugin.red5;
 
+import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import java.util.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+
+import org.xmlpull.v1.XmlPullParser;
 
 import org.jivesoftware.spark.*;
 import org.jivesoftware.smack.*;
@@ -39,9 +42,11 @@ import org.jivesoftware.spark.util.*;
 import org.jivesoftware.smack.filter.*;
 import org.jivesoftware.spark.util.log.*;
 import org.jivesoftware.smack.packet.*;
+import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.packet.*;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Message.Type;
+import org.jivesoftware.smack.provider.ProviderManager;
 
 import org.redfire.screen.*;
 
@@ -57,7 +62,6 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 	private String red5server = "localhost";
 	private String red5port = "7070";
 	private String url = protocol + red5server + ":" + red5port;
-	private String popup = "false";
 
 	private static File pluginsettings = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "Spark" + System.getProperty("file.separator") + "red5.properties"); //new
 	private Map<String, Red5ChatRoomDecorator> decorators = new HashMap<String, Red5ChatRoomDecorator>();
@@ -83,12 +87,6 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 			try {
 				props.load(new FileInputStream(pluginsettings));
-
-				if (props.getProperty("popup") != null)
-				{
-					popup = props.getProperty("popup");
-					Log.warning("Red-Info: Red5-popup from properties-file is= " + popup);
-				}
 
 				if (props.getProperty("server") != null)
 				{
@@ -185,7 +183,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 	public boolean accept(Packet packet) {
 
-		return true;
+			return true;
 	}
 
 	public void processPacket(Packet packet) {
@@ -200,17 +198,30 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 				redfireExtension = message.getExtension("redfire-invite", "http://redfire.4ng.net/xmlns/redfire-invite");
 
-				if (redfireExtension != null)
+				if (redfireExtension != null && "error".equals(message.getType().toString()) == false)
 				{
 					String xml = redfireExtension.toXML();
 
-					String roomID = getTag(xml, "roomID");
+					String nickname = getTag(xml, "nickname");
+					String roomId = getTag(xml, "roomId");
+					String url = message.getBody();
+					String prompt = getTag(xml, "prompt");
+
 					int width = Integer.parseInt(getTag(xml, "width"));
 					int height = Integer.parseInt(getTag(xml, "height"));
 
-					Log.warning("RedfireExtension  invite recieved " + roomID);
+					Log.warning("RedfireExtension  invite recieved " + message.getFrom());
 
-					if ("true".equals(popup)) BareBonesBrowserLaunch.openURL(width, height, message.getBody(), roomID);
+					ChatRoom chatroom = chatManager.getChatRoom(roomId);
+
+					if (chatroom != null)
+					{
+						showInvitationAlert(width, height, chatroom, nickname, prompt, url);
+
+					} else {
+
+						BareBonesBrowserLaunch.openURL(width, height, url, roomId);
+					}
 				}
 			}
 		}
@@ -238,4 +249,61 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 		return (tagValue);
 	}
+
+    private void showInvitationAlert(final int width, final int height, final ChatRoom chatroom, final String nickname, final String prompt, final String url)
+    {
+        final JPanel inviteAlert = new JPanel();
+        inviteAlert.setLayout(new BorderLayout());
+
+        JPanel invitePanel = new JPanel()
+        {
+			private static final long serialVersionUID = 5942001917654498678L;
+
+			protected void paintComponent(Graphics g)
+			{
+                ImageIcon imageIcon = new ImageIcon(getClass().getClassLoader().getResource("images/logo_small.gif"));
+                Image image = imageIcon.getImage();
+                g.drawImage(image, 0, 0, null);
+            }
+        };
+
+        invitePanel.setPreferredSize(new Dimension(24,24));
+        inviteAlert.add(invitePanel, BorderLayout.WEST);
+        JPanel content = new JPanel(new BorderLayout());
+
+        content.add(new JLabel(nickname + prompt), BorderLayout.CENTER);
+        JPanel buttonPanel = new JPanel();
+
+        JButton acceptButton = new JButton("Accept");
+
+        acceptButton.addActionListener(new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+				chatroom.getTranscriptWindow().remove(inviteAlert);
+				BareBonesBrowserLaunch.openURL(width, height, url, chatroom.getRoomTitle());
+            }
+        });
+        buttonPanel.add(acceptButton);
+
+        JButton declineButton = new JButton("Decline");
+
+        declineButton.addActionListener(new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+ 				chatroom.getTranscriptWindow().remove(inviteAlert);
+            }
+        });
+        buttonPanel.add(declineButton);
+
+        content.add(buttonPanel, BorderLayout.SOUTH);
+        inviteAlert.add(content, BorderLayout.CENTER);
+
+		try {
+			Thread.sleep(1000);
+		} catch (Exception e) {}
+
+        chatroom.getTranscriptWindow().addComponent(inviteAlert);
+    }
 }
