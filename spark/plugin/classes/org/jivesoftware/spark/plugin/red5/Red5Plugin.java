@@ -178,7 +178,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
     public void chatRoomOpened(final ChatRoom room)
     {
-		decorators.put(room.getRoomTitle(), new Red5ChatRoomDecorator(room, url));
+		decorators.put(room.getRoomTitle(), new Red5ChatRoomDecorator(room, url, red5server));
     }
 
 	public boolean accept(Packet packet) {

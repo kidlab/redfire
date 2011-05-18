@@ -12,8 +12,8 @@ private var myCam:Camera;
 private var myMic:Microphone;
 
 private var videoPicQuality:int = 0;
-private var videoFps:int = 15;
-private var videoBandwidth:int = 25600;
+private var videoFps:int = 30;
+private var videoBandwidth:int = 256000;
 private var micSetRate:int = 22;
 		
 private var nc:NetConnection = null;
@@ -108,7 +108,7 @@ private function handleConnected():void
 	}
 
 	myMic = getMicrophone();
-	//myMic.rate = micSetRate;
+	myMic.rate = micSetRate;
 
 	// Initialise the up-stream NetStream
 
@@ -535,8 +535,12 @@ private function init2WayDisplay(ns:NetStream, vid:Video, uic:VideoObject, strea
 
 private function getMicrophone() :Microphone 
 {
-	var m:Microphone = Microphone.getEnhancedMicrophone();	
-	return m;
+	var mic:Microphone = Microphone.getEnhancedMicrophone();	
+	mic.setUseEchoSuppression(true);
+	mic.setLoopBack(false);
+	mic.setSilenceLevel(10, 20000);
+	mic.gain = 60;
+	return mic;
 }
 
 private function logMessage(message:String):void

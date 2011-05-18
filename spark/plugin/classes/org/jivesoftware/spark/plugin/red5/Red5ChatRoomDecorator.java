@@ -49,12 +49,14 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 	private RolloverButton screenButton;
 	private final ChatRoom room;
 	private final String url;
+	private final String red5server;
 	public static ScreenShare screenShare = null;
 
-	public Red5ChatRoomDecorator(final ChatRoom room, final String url)
+	public Red5ChatRoomDecorator(final ChatRoom room, final String url, final String red5server)
 	{
 		this.room = room;
 		this.url = url;
+		this.red5server = red5server;
 
 		//Red5Preference preference = (Red5Preference) SparkManager.getPreferenceManager().getPreference(Red5Preference.NAMESPACE);
 
@@ -138,6 +140,11 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 			});
 
 			screenShare = ScreenShare.getInstance();
+			screenShare.host = red5server;
+			screenShare.app = "xmpp";
+			screenShare.port = 1935;
+			screenShare.codec = "flashsv2";
+
 
 	        ImageIcon screenIcon = new ImageIcon(cl.getResource("images/screen_share.gif"));
 	        screenButton = new RolloverButton(screenIcon);
@@ -148,8 +155,6 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 				public void actionPerformed(ActionEvent event)
 				{
 					Log.warning("host: " + screenShare.host + ", app: " + screenShare.app + ", port: " + screenShare.port + ", publish: " + screenShare.publishName);
-
-					screenShare.createWindow();
 
 					String jid = org.jivesoftware.smack.util.StringUtils.parseBareAddress(SparkManager.getSessionManager().getJID());
 					String screenSessionID = SparkManager.getConnection().getConnectionID();
@@ -179,6 +184,9 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 					}
 
 					Log.warning("Red5ChatRoomDecorator: screenButton " + newUrl);
+
+					screenShare.publishName = playStream;
+					screenShare.createWindow();
 				}
 			});
 

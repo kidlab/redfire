@@ -78,9 +78,9 @@
 			
 			rtmpUrl		= FlexGlobals.topLevelApplication.parameters.rtmpUrl == null 	? rtmpUrl : 	FlexGlobals.topLevelApplication.parameters.rtmpUrl;
 			rtmfpUrl	= FlexGlobals.topLevelApplication.parameters.rtmfpUrl == null 	? rtmfpUrl : 	FlexGlobals.topLevelApplication.parameters.rtmfpUrl;
-			streamKey	= FlexGlobals.topLevelApplication.parameters.key == null 	? streamKey : 	FlexGlobals.topLevelApplication.parameters.key;
-			streamMe	= FlexGlobals.topLevelApplication.parameters.stream == null 	? streamMe : 	FlexGlobals.topLevelApplication.parameters.stream;
 			
+			streamKey	= FlexGlobals.topLevelApplication.parameters.key == null 	? streamKey : 	FlexGlobals.topLevelApplication.parameters.key;
+			streamMe	= FlexGlobals.topLevelApplication.parameters.stream == null 	? streamMe : 	FlexGlobals.topLevelApplication.parameters.stream;			
 			stream0		= FlexGlobals.topLevelApplication.parameters.stream0 == null 	? stream0 : 	FlexGlobals.topLevelApplication.parameters.stream0;
 			stream1		= FlexGlobals.topLevelApplication.parameters.stream1 == null 	? stream1 : 	FlexGlobals.topLevelApplication.parameters.stream1;
 			stream2		= FlexGlobals.topLevelApplication.parameters.stream2 == null 	? stream2 : 	FlexGlobals.topLevelApplication.parameters.stream2;
@@ -93,6 +93,11 @@
 			stream9		= FlexGlobals.topLevelApplication.parameters.stream9 == null 	? stream9 : 	FlexGlobals.topLevelApplication.parameters.stream9;
 			stream10	= FlexGlobals.topLevelApplication.parameters.stream10 == null 	? stream10 :	FlexGlobals.topLevelApplication.parameters.stream10;
 			stream11	= FlexGlobals.topLevelApplication.parameters.stream11 == null 	? stream11 : 	FlexGlobals.topLevelApplication.parameters.stream11;
+
+			videoPicQuality = FlexGlobals.topLevelApplication.parameters.videoPicQuality == null 	? videoPicQuality 	: FlexGlobals.topLevelApplication.parameters.videoPicQuality;
+			videoFps	= FlexGlobals.topLevelApplication.parameters.videoFps == null 		? videoFps 		: FlexGlobals.topLevelApplication.parameters.videoFps;
+			videoBandwidth 	= FlexGlobals.topLevelApplication.parameters.videoBandwidth == null 	? videoBandwidth 	: FlexGlobals.topLevelApplication.parameters.videoBandwidth;
+			micSetRate	= FlexGlobals.topLevelApplication.parameters.micSetRate == null 	? micSetRate 		: FlexGlobals.topLevelApplication.parameters.micSetRate;
 
 			setupConnection();				
 		}

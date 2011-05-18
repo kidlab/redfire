@@ -48,6 +48,11 @@
 			streamMe	= FlexGlobals.topLevelApplication.parameters.streamMe == null 	? streamMe : 	FlexGlobals.topLevelApplication.parameters.streamMe;
 			streamYou	= FlexGlobals.topLevelApplication.parameters.streamYou == null 	? streamYou : 	FlexGlobals.topLevelApplication.parameters.streamYou;
 
+			videoPicQuality = FlexGlobals.topLevelApplication.parameters.videoPicQuality == null 	? videoPicQuality 	: FlexGlobals.topLevelApplication.parameters.videoPicQuality;
+			videoFps	= FlexGlobals.topLevelApplication.parameters.videoFps == null 		? videoFps 		: FlexGlobals.topLevelApplication.parameters.videoFps;
+			videoBandwidth 	= FlexGlobals.topLevelApplication.parameters.videoBandwidth == null 	? videoBandwidth 	: FlexGlobals.topLevelApplication.parameters.videoBandwidth;
+			micSetRate	= FlexGlobals.topLevelApplication.parameters.micSetRate == null 	? micSetRate 		: FlexGlobals.topLevelApplication.parameters.micSetRate;
+
 			setupConnection();				
 		}
 		
