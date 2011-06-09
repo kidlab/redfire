@@ -27,6 +27,7 @@ public class JnlpServlet extends HttpServlet {
 			String app = request.getParameter("app");
 			String port = request.getParameter("port");
 			String screenCodec = request.getParameter("codec");
+			String frameRate = request.getParameter("frameRate");
 
 			if (stream == null) {
 				stream = "screen_share";
@@ -43,6 +44,11 @@ public class JnlpServlet extends HttpServlet {
 			if (screenCodec == null) {
 				screenCodec = "flashsv2";
 			}
+
+			if (frameRate == null) {
+				frameRate = "30";
+			}
+
 
 			out.println("<?xml version='1.0' encoding='utf-8'?>");
 			out.println("<jnlp spec='1.0+' codebase='http://" + request.getServerName() + ":" + request.getServerPort() + "/redfire/screen'> ");
@@ -69,6 +75,7 @@ public class JnlpServlet extends HttpServlet {
 			out.println("		<argument>" + port + "</argument>");
 			out.println("		<argument>" + stream + "</argument> ");
 			out.println("		<argument>" + screenCodec + "</argument> ");
+			out.println("		<argument>" + frameRate + "</argument> ");
 			out.println("	</application-desc> ");
 			out.println("</jnlp>");
 			        }

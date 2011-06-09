@@ -144,6 +144,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 			screenShare.app = "xmpp";
 			screenShare.port = 1935;
 			screenShare.codec = "flashsv2";
+			screenShare.frameRate = 30;
 
 
 	        ImageIcon screenIcon = new ImageIcon(cl.getResource("images/screen_share.gif"));

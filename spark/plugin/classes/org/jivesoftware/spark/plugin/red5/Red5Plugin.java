@@ -52,7 +52,7 @@ import org.redfire.screen.*;
 
 
 
-public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, PacketFilter
+public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, PacketFilter, TranscriptWindowInterceptor
 {
 	private org.jivesoftware.spark.ChatManager chatManager;
 	private ImageIcon red5Icon;
@@ -66,6 +66,8 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 	private static File pluginsettings = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "Spark" + System.getProperty("file.separator") + "red5.properties"); //new
 	private Map<String, Red5ChatRoomDecorator> decorators = new HashMap<String, Red5ChatRoomDecorator>();
 
+    private JPanel inviteAlert;
+
     public Red5Plugin() {
 		ClassLoader cl = getClass().getClassLoader();
 		red5Icon = new ImageIcon(cl.getResource("images/logo_small.gif"));
@@ -74,6 +76,8 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
     public void initialize()
     {
 		chatManager = SparkManager.getChatManager();
+       	chatManager.addTranscriptWindowInterceptor(this);
+
 		userManager = SparkManager.getUserManager();
 
 		red5server = SparkManager.getConnection().getServiceName();
@@ -123,6 +127,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		ScreenShare.getInstance().app = "xmpp";
 		ScreenShare.getInstance().port = 1935;
 		ScreenShare.getInstance().codec = "flashsv2";
+		ScreenShare.getInstance().frameRate = 30;
 		ScreenShare.getInstance().publishName = "screen_share_" + SparkManager.getConnection().getConnectionID();
 
 		chatManager.addChatRoomListener(this);
@@ -250,9 +255,10 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		return (tagValue);
 	}
 
-    private void showInvitationAlert(final int width, final int height, final ChatRoom chatroom, final String nickname, final String prompt, final String url)
+    private void showInvitationAlert(final int width, final int height, final ChatRoom room, final String nickname, final String prompt, final String url)
     {
-        final JPanel inviteAlert = new JPanel();
+        final ChatRoom chatroom = room;
+        inviteAlert = new JPanel();
         inviteAlert.setLayout(new BorderLayout());
 
         JPanel invitePanel = new JPanel()
@@ -280,6 +286,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
         {
             public void actionPerformed(ActionEvent e)
             {
+				inviteAlert.setVisible(false);
 				chatroom.getTranscriptWindow().remove(inviteAlert);
 				BareBonesBrowserLaunch.openURL(width, height, url, chatroom.getRoomTitle());
             }
@@ -292,6 +299,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
         {
             public void actionPerformed(ActionEvent e)
             {
+				inviteAlert.setVisible(false);
  				chatroom.getTranscriptWindow().remove(inviteAlert);
             }
         });
@@ -306,4 +314,16 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
         chatroom.getTranscriptWindow().addComponent(inviteAlert);
     }
+
+    public boolean isMessageIntercepted(TranscriptWindow window, String userid, Message message)
+    {
+		RedfireExtension redfireExtension = (RedfireExtension) message.getExtension("redfire-invite", "http://redfire.4ng.net/xmlns/redfire-invite");
+
+		if (redfireExtension != null && "error".equals(message.getType().toString()) == false)
+		{
+			return true;
+		}
+        return false;
+    }
+
 }

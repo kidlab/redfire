@@ -1,18 +1,9 @@
-2011-04-08 09:54:36,210 [pool-1-thread-1] INFO  o.r.screen.ScreenClientHandler - channel opened: [id: 0x0145f939] OPEN
-2011-04-08 09:54:37,161 [New I/O client worker #1-1] INFO  o.r.s.ScreenClientHandshakeHandler - connected, starting handshake
-2011-04-08 09:54:37,231 [New I/O client worker #1-1] INFO  com.flazr.rtmp.RtmpHandshake - using client version 00000000
-2011-04-08 09:54:37,231 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - handshake complete, sending 'connect'
-2011-04-08 09:54:37,251 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: connect, transactionId: 1, object: {app=xmpp, flashVer=WIN 9,0,124,2, tcUrl=rtmp://btg199251:1935/xmpp, fpad=false, audioCodecs=1639.0, videoCodecs=252.0, objectEncoding=0.0, capabilities=15.0, videoFunction=1.0}, args: null
-2011-04-08 09:54:37,301 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: _result
-2011-04-08 09:54:37,301 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - result for method call: connect
-2011-04-08 09:54:37,301 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: createStream, transactionId: 2, object: null, args: []
-2011-04-08 09:54:37,311 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - channel closed: [id: 0x0145f939, /192.168.1.64:1745 => btg199251/192.168.1.64:1935] CLOSED
-2011-04-08 09:55:04,010 [pool-3-thread-1] INFO  o.r.screen.ScreenClientHandler - channel opened: [id: 0x008b677f] OPEN
-2011-04-08 09:55:04,060 [New I/O client worker #2-1] INFO  o.r.s.ScreenClientHandshakeHandler - connected, starting handshake
-2011-04-08 09:55:04,070 [New I/O client worker #2-1] INFO  com.flazr.rtmp.RtmpHandshake - using client version 00000000
-2011-04-08 09:55:04,070 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - handshake complete, sending 'connect'
-2011-04-08 09:55:04,080 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: connect, transactionId: 1, object: {app=xmpp, flashVer=WIN 9,0,124,2, tcUrl=rtmp://btg199251:1935/xmpp, fpad=false, audioCodecs=1639.0, videoCodecs=252.0, objectEncoding=0.0, capabilities=15.0, videoFunction=1.0}, args: null
-2011-04-08 09:55:04,090 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - server command: _result
-2011-04-08 09:55:04,090 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - result for method call: connect
-2011-04-08 09:55:04,090 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: createStream, transactionId: 2, object: null, args: []
-2011-04-08 09:55:04,090 [New I/O client worker #2-1] INFO  o.r.screen.ScreenClientHandler - channel closed: [id: 0x008b677f, /192.168.1.64:1753 => btg199251/192.168.1.64:1935] CLOSED
+2011-06-06 18:59:27,038 [pool-1-thread-1] INFO  o.r.screen.ScreenClientHandler - channel opened: [id: 0x0143bf3d] OPEN
+2011-06-06 18:59:27,359 [New I/O client worker #1-1] INFO  o.r.s.ScreenClientHandshakeHandler - connected, starting handshake
+2011-06-06 18:59:27,379 [New I/O client worker #1-1] INFO  com.flazr.rtmp.RtmpHandshake - using client version 00000000
+2011-06-06 18:59:28,671 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - handshake complete, sending 'connect'
+2011-06-06 18:59:28,681 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: connect, transactionId: 1, object: {app=xmpp, flashVer=WIN 9,0,124,2, tcUrl=rtmp://btg199251:1935/xmpp, fpad=false, audioCodecs=1639.0, videoCodecs=252.0, objectEncoding=0.0, capabilities=15.0, videoFunction=1.0}, args: null
+2011-06-06 18:59:28,801 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - server command: _result
+2011-06-06 18:59:28,801 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - result for method call: connect
+2011-06-06 18:59:28,801 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - sending command (expecting result): [0 COMMAND_AMF0 c3 #0 t0 (0) s0] name: createStream, transactionId: 2, object: null, args: []
+2011-06-06 18:59:28,811 [New I/O client worker #1-1] INFO  o.r.screen.ScreenClientHandler - channel closed: [id: 0x0143bf3d, /127.0.0.1:1069 => btg199251/127.0.0.1:1935] CLOSED

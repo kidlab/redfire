@@ -130,7 +130,7 @@
 
 			
 			public function initMicrophone():void {
-				mic = Microphone.getMicrophone();
+				mic = getMicrophone();
 		
 				if(mic == null){
 					trace("No available microphone");
@@ -150,6 +150,26 @@
 				}
 			}	
 			
+			private function getMicrophone() :Microphone 
+			{
+				var m : Microphone;
+
+				if(Capabilities.version.search('10,3') == -1)
+				{
+					m = Microphone(Microphone.getMicrophone());
+
+				} else {
+					m = Microphone(Microphone['getEnhancedMicrophone']());
+					var options : MicrophoneEnhancedOptions = new MicrophoneEnhancedOptions();
+					options.mode = MicrophoneEnhancedMode.FULL_DUPLEX;
+					options.autoGain = false;
+					options.echoPath = 128;
+					options.nonLinearProcessing = true;
+					m['enhancedOptions'] = options;
+				} 
+
+				return m;
+			}
 			
 			private function micActivityHandler(event:ActivityEvent):void {}
 	

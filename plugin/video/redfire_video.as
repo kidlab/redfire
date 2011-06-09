@@ -48,6 +48,7 @@ private function setupConnection():void
 				timer.addEventListener(TimerEvent.TIMER, function onTimer(evt:TimerEvent):void
 				{
 					timer.stop();
+					nc.close();
 					nc.connect(rtmpUrl);															
 				});
 
@@ -81,7 +82,14 @@ private function setupConnection():void
 			
 	// Open streaming connection, first try RTMFP
 
-	nc.connect(rtmfpUrl);
+	if (rtmfpUrl != "")
+	{
+		nc.connect(rtmfpUrl);
+	
+	} else {
+		p2pEnabled = false;	
+		nc.connect(rtmpUrl);	
+	}
 }
 
 private function handleDisconnected():void

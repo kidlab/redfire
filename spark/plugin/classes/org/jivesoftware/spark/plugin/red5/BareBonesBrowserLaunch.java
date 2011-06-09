@@ -43,7 +43,7 @@ import java.util.*;
 
 import org.jivesoftware.spark.SparkManager;
 import org.jivesoftware.spark.component.browser.*;
-
+import org.jivesoftware.spark.util.log.*;
 
 public class BareBonesBrowserLaunch {
 
@@ -52,6 +52,74 @@ public class BareBonesBrowserLaunch {
 
    static final Map<String, JFrame> windows = new HashMap<String, JFrame>();
    static final Map<String, BrowserViewer> viewers = new HashMap<String, BrowserViewer>();
+
+
+   /**
+    * Opens the specified web page in the user's default browser
+    * @param url A web address (URL) of a web page (ex: "http://www.google.com/")
+    */
+
+   public static void openURL(int width, int height, String url, String title)
+   {
+      try {
+
+		String OS = System.getProperty("os.name").toLowerCase();
+
+	 	Log.warning("BareBonesBrowserLaunch.openURL: " + url + " " + title + " " + OS);
+
+		if (OS.indexOf("windows") > -1)
+		{
+			openBrowserURL(width, height, url, title);
+
+		} else {
+
+		  	//attempt to use Desktop library from JDK 1.6+
+
+         	Class<?> d = Class.forName("java.awt.Desktop");
+         	d.getDeclaredMethod("browse", new Class[] {java.net.URI.class}).invoke(d.getDeclaredMethod("getDesktop").invoke(null), new Object[] {java.net.URI.create(url)});
+
+         	//above code mimicks:  java.awt.Desktop.getDesktop().browse()
+	 	}
+
+     } catch (Exception ignore) {  //library not available or failed
+
+	 	 Log.warning("BareBonesBrowserLaunch.openURL: ignore " + ignore);
+
+         String osName = System.getProperty("os.name");
+
+         try {
+
+            if (osName.startsWith("Mac OS"))
+            {
+               Class.forName("com.apple.eio.FileManager").getDeclaredMethod("openURL", new Class[] {String.class}).invoke(null, new Object[] {url});
+
+            }  else if (osName.startsWith("Windows")) {
+               Runtime.getRuntime().exec("rundll32 url.dll,FileProtocolHandler " + url);
+
+
+            } else { //assume Unix or Linux
+               String browser = null;
+
+               for (String b : browsers)
+               {
+                  if (browser == null && Runtime.getRuntime().exec(new String[] {"which", b}).getInputStream().read() != -1)
+                  {
+                     Runtime.getRuntime().exec(new String[] {browser = b, url});
+				  }
+			   }
+
+               if (browser == null)
+               {
+                  throw new Exception(Arrays.toString(browsers));
+               }
+            }
+
+         } catch (Exception e) {
+			Log.warning("BareBonesBrowserLaunch.openURL: error " + e);
+            JOptionPane.showMessageDialog(null, errMsg + "\n" + e.toString());
+         }
+      }
+	}
 
    private static void openBrowserURL(int width, int height, String url, String title)
    {
@@ -99,66 +167,4 @@ public class BareBonesBrowserLaunch {
 		}
    }
 
-   /**
-    * Opens the specified web page in the user's default browser
-    * @param url A web address (URL) of a web page (ex: "http://www.google.com/")
-    */
-
-   public static void openURL(int width, int height, String url, String title)
-   {
-      try {
-
-		String OS = System.getProperty("os.name").toLowerCase();
-
-		if (OS.indexOf("windows") > -1)
-		{
-			openBrowserURL(width, height, url, title);
-
-		} else {
-
-		  	//attempt to use Desktop library from JDK 1.6+
-
-         	Class<?> d = Class.forName("java.awt.Desktop");
-         	d.getDeclaredMethod("browse", new Class[] {java.net.URI.class}).invoke(d.getDeclaredMethod("getDesktop").invoke(null), new Object[] {java.net.URI.create(url)});
-
-         	//above code mimicks:  java.awt.Desktop.getDesktop().browse()
-	 	}
-
-     } catch (Exception ignore) {  //library not available or failed
-
-         String osName = System.getProperty("os.name");
-
-         try {
-
-            if (osName.startsWith("Mac OS"))
-            {
-               Class.forName("com.apple.eio.FileManager").getDeclaredMethod("openURL", new Class[] {String.class}).invoke(null, new Object[] {url});
-
-            }  else if (osName.startsWith("Windows")) {
-               Runtime.getRuntime().exec("rundll32 url.dll,FileProtocolHandler " + url);
-
-
-            } else { //assume Unix or Linux
-               String browser = null;
-
-               for (String b : browsers)
-               {
-                  if (browser == null && Runtime.getRuntime().exec(new String[] {"which", b}).getInputStream().read() != -1)
-                  {
-                     Runtime.getRuntime().exec(new String[] {browser = b, url});
-				  }
-			   }
-
-               if (browser == null)
-               {
-                  throw new Exception(Arrays.toString(browsers));
-               }
-            }
-
-         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, errMsg + "\n" + e.toString());
-            }
-         }
-      }
-
-   }
+}
