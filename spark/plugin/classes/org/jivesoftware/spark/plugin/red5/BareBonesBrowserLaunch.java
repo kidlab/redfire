@@ -149,7 +149,6 @@ public class BareBonesBrowserLaunch {
 					windows.remove(title);
 
 					BrowserViewer viewer = viewers.get(title);
-					viewer.loadURL("about:blank");
 					viewers.remove(title);
 				}
 			});

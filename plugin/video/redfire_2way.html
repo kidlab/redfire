@@ -73,6 +73,11 @@ function getPageParameter(parameterName, defaultValue) {
 		var rtmfpUrl	= getPageParameter('rtmfpUrl', '');
 		var key 		= getPageParameter('key', 'KEY');
 
+		var videoPicQuality		= getPageParameter('videoPicQuality', '0');
+		var videoFps			= getPageParameter('videoFps', '30');
+		var videoBandwidth		= getPageParameter('videoBandwidth', '256000');
+		var micSetRate			= getPageParameter('micSetRate', '22');
+
 		fo = new SWFObject("redfire_2way.swf", "redfireVideo", "100%", "100%", "10");
 		fo.addParam("swLiveConnect", "true");
 		fo.addParam("name", "redfireVideo");
@@ -82,6 +87,11 @@ function getPageParameter(parameterName, defaultValue) {
 		fo.addVariable("streamMe", streamMe);
 		fo.addVariable("streamYou", streamYou);
 		fo.addVariable("key", key);
+
+		fo.addVariable("videoPicQuality", videoPicQuality);
+		fo.addVariable("videoFps", videoFps);
+		fo.addVariable("videoBandwidth", videoBandwidth);
+		fo.addVariable("micSetRate", micSetRate);
 
 		fo.write("redfireVideoDIV");
 </script>

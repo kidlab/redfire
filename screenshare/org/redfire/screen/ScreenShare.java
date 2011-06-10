@@ -626,7 +626,7 @@ public class ScreenShare {
 					try
 					{
 						BufferedImage image = robot.createScreenCapture(new Rectangle(x, y, width, height));
-						BufferedImage image1 = addCursor(image);
+						BufferedImage image1 = addCursor(x, y, image);
 						//BufferedImage image2 = affinetransformop.filter(image1, null);
 
 						timestamp =  System.currentTimeMillis() - startTime;
@@ -657,14 +657,14 @@ public class ScreenShare {
 			}
 		}
 
-		private BufferedImage addCursor(BufferedImage image)
+		private BufferedImage addCursor(int x, int y, BufferedImage image)
 		{
 			BufferedImage newImage = image;
 
 			Point point = MouseInfo.getPointerInfo().getLocation();
 
 			Graphics2D g2d = newImage.createGraphics();
-			g2d.drawImage(cursorImage, new AffineTransform(1f,0f,0f,1f, point.x, point.y), null);
+			g2d.drawImage(cursorImage, new AffineTransform(1f,0f,0f,1f, point.x - x, point.y - y), null);
 			g2d.dispose();
 
 			return newImage;
