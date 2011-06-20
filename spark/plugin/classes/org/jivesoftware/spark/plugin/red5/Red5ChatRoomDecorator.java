@@ -45,12 +45,13 @@ import org.redfire.screen.*;
 
 public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 {
-	private RolloverButton red5Button;
-	private RolloverButton screenButton;
-	private final ChatRoom room;
+	public RolloverButton red5Button;
+	public RolloverButton screenButton;
+	public ChatRoom room;
+	public static ScreenShare screenShare = null;
+
 	private final String url;
 	private final String red5server;
-	public static ScreenShare screenShare = null;
 
 	public Red5ChatRoomDecorator(final ChatRoom room, final String url, final String red5server)
 	{
@@ -73,7 +74,6 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 				{
 					int width = 0;
 					int height = 0;
-					String title = room.getRoomname();
 
 					//room.getChatInputEditor().requestFocusInWindow();
 
@@ -113,7 +113,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 							if (member.equals(nickName) == false)
 							{
 								String youURL = url + "/redfire/video/redfire_video.html?key=" + sessionID + "&others=" + others + "&me=" + java.net.URLEncoder.encode(member);
-								sendInvite(" is offering to share a video in this conference", roomJID + "/" + member, youURL, width, height, roomJID);
+								sendInvite(" is offering to share a video in this conference", roomJID + "/" + member, youURL, width, height, "groupchat", "_video");
 							}
 						}
 
@@ -129,13 +129,13 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 						newUrl = url + "/redfire/video/redfire_2way.html?me=" + me + "&you=" + you + "&key=" + sessionID;
 						String youURL = url + "/redfire/video/redfire_2way.html?you=" + me + "&me=" + you + "&key=" + sessionID;
 
-						sendInvite(" is offering to share audio and video in this chat", youJID, youURL, width, height, jid);
+						sendInvite(" is offering to share audio and video in this chat", youJID, youURL, width, height, "chat", "_video");
 
 						Log.warning("Red5ChatRoomDecorator: red5Button " + youURL);
 
 					}
 
-					BareBonesBrowserLaunch.openURL(width, height, newUrl, title);
+					BareBonesBrowserLaunch.openURL(width, height, newUrl, room.getRoomname());
 				}
 			});
 
@@ -158,6 +158,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 					Log.warning("host: " + screenShare.host + ", app: " + screenShare.app + ", port: " + screenShare.port + ", publish: " + screenShare.publishName);
 
 					String jid = org.jivesoftware.smack.util.StringUtils.parseBareAddress(SparkManager.getSessionManager().getJID());
+					String me = getNode(jid);
 					String screenSessionID = SparkManager.getConnection().getConnectionID();
 					String playStream = "screen_share_" + screenSessionID;
 					String newUrl = url + "/redfire/screen/screenviewer.html?stream=" + playStream;
@@ -174,13 +175,13 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 
 							if (member.equals(nickName) == false)
 							{
-								sendInvite(" is offering to share their desktop in this conference", roomJID  + "/" + member, newUrl, 1064, 818, roomJID);
+								sendInvite(" is offering to share their desktop in this conference", roomJID  + "/" + member, newUrl, 1064, 818, "groupchat", "_screen");
 							}
 						}
 
 					} else {
 						String youJID = ((ChatRoomImpl)room).getParticipantJID();
-						sendInvite(" is offering to share their desktop in this chat", youJID, newUrl, 1064, 818, jid);
+						sendInvite(" is offering to share their desktop in this chat", youJID, newUrl, 1064, 818, "chat", "_screen");
 
 					}
 
@@ -196,12 +197,32 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 		//}
 	}
 
-
+   @Override
 	public void closing()
 	{
-
+		Log.warning("Red5-Red5ChatRoomDecorator: closing " + room.getRoomname());
 	}
 
+
+	public void finished()
+	{
+		Log.warning("Red5-Red5ChatRoomDecorator: finished " + room.getRoomname());
+
+		if (screenShare.t != null)
+		{
+			screenShare.stopStream();
+
+			screenShare.t.setVisible(false);
+			screenShare.t.dispose();
+			screenShare.t.setVisible(false);
+		}
+
+		if (room != null)
+		{
+			BareBonesBrowserLaunch.closeURL(room.getRoomname());
+		}
+
+	}
 
 	private String getNode(String jid)
 	{
@@ -244,7 +265,7 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 	}
 
 
-	private void sendInvite(String prompt, String jid, String url, int width, int height, String roomId)
+	private void sendInvite(String prompt, String jid, String url, int width, int height, String roomType, String windowType)
 	{
 		Message message2 = new Message();
 		message2.setTo(jid);
@@ -255,8 +276,9 @@ public class Red5ChatRoomDecorator  implements ChatRoomClosingListener
 		redfireExtension.setValue("width",  String.valueOf(width));
 		redfireExtension.setValue("height", String.valueOf(height));
 		redfireExtension.setValue("nickname", SparkManager.getUserManager().getNickname());
-		redfireExtension.setValue("roomId", roomId);
+		redfireExtension.setValue("roomType", roomType);
 		redfireExtension.setValue("prompt", prompt);
+		redfireExtension.setValue("windowType", windowType);
 		message2.addExtension(redfireExtension);
 		SparkManager.getConnection().sendPacket(message2);
 	}

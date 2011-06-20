@@ -37,6 +37,7 @@ import org.jivesoftware.smackx.*;
 import org.jivesoftware.spark.component.*;
 import org.jivesoftware.spark.component.browser.*;
 import org.jivesoftware.spark.plugin.*;
+import org.jivesoftware.spark.ui.rooms.*;
 import org.jivesoftware.spark.ui.*;
 import org.jivesoftware.spark.util.*;
 import org.jivesoftware.smack.filter.*;
@@ -65,8 +66,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 	private static File pluginsettings = new File(System.getProperty("user.home") + System.getProperty("file.separator") + "Spark" + System.getProperty("file.separator") + "red5.properties"); //new
 	private Map<String, Red5ChatRoomDecorator> decorators = new HashMap<String, Red5ChatRoomDecorator>();
-
-    private JPanel inviteAlert;
+	private Map<String, JPanel> windows = new HashMap<String, JPanel>();
 
     public Red5Plugin() {
 		ClassLoader cl = getClass().getClassLoader();
@@ -120,14 +120,14 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
 		} else {
 
-		  	Log.error("Red5-Error: Properties-file does not exist= " + pluginsettings.getPath());
+		  	Log.warning("Red5-Error: Properties-file does not exist= " + pluginsettings.getPath() + ", using default " + url);
 		}
 
 		ScreenShare.getInstance().host = red5server;
 		ScreenShare.getInstance().app = "xmpp";
 		ScreenShare.getInstance().port = 1935;
 		ScreenShare.getInstance().codec = "flashsv2";
-		ScreenShare.getInstance().frameRate = 30;
+		ScreenShare.getInstance().frameRate = 15;
 		ScreenShare.getInstance().publishName = "screen_share_" + SparkManager.getConnection().getConnectionID();
 
 		chatManager.addChatRoomListener(this);
@@ -160,10 +160,33 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
     public void chatRoomClosed(ChatRoom chatroom)
     {
-		if (decorators.containsKey(chatroom.getRoomTitle()))
+		String roomId = chatroom.getRoomname();
+
+		Log.warning("chatRoomClosed:  " + roomId);
+
+		if (decorators.containsKey(roomId))
 		{
-			Red5ChatRoomDecorator decorator = decorators.remove(chatroom.getRoomTitle());
+			Red5ChatRoomDecorator decorator = decorators.remove(roomId);
+			decorator.finished();
 			decorator = null;
+
+			String window1 = roomId + "_screen";
+			String window2 = roomId + "_video";
+
+			BareBonesBrowserLaunch.closeURL(window1);
+			BareBonesBrowserLaunch.closeURL(window2);
+
+			if (windows.containsKey(window1))
+			{
+				JPanel panel = windows.remove(window1);
+				panel = null;
+			}
+
+			if (windows.containsKey(window2))
+			{
+				JPanel panel = windows.remove(window2);
+				panel = null;
+			}
 		}
     }
 
@@ -183,7 +206,7 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 
     public void chatRoomOpened(final ChatRoom room)
     {
-		decorators.put(room.getRoomTitle(), new Red5ChatRoomDecorator(room, url, red5server));
+		decorators.put(room.getRoomname(), new Red5ChatRoomDecorator(room, url, red5server));
     }
 
 	public boolean accept(Packet packet) {
@@ -208,25 +231,23 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 					String xml = redfireExtension.toXML();
 
 					String nickname = getTag(xml, "nickname");
-					String roomId = getTag(xml, "roomId");
 					String url = message.getBody();
 					String prompt = getTag(xml, "prompt");
+					String windowType = getTag(xml, "windowType");
+					String roomType = getTag(xml, "roomType");
 
 					int width = Integer.parseInt(getTag(xml, "width"));
 					int height = Integer.parseInt(getTag(xml, "height"));
 
-					Log.warning("RedfireExtension  invite recieved " + message.getFrom());
+					String roomId = message.getFrom();
 
-					ChatRoom chatroom = chatManager.getChatRoom(roomId);
+					//Log.warning("RedfireExtension  invite recieved " + roomId);
 
-					if (chatroom != null)
-					{
-						showInvitationAlert(width, height, chatroom, nickname, prompt, url);
+					ChatRoom chatRoom = getRoom(roomId);
 
-					} else {
+					if (chatRoom != null)
+						windows.put(roomId + windowType, showInvitationAlert(width, height, roomId, nickname, prompt, url, windowType));
 
-						BareBonesBrowserLaunch.openURL(width, height, url, roomId);
-					}
 				}
 			}
 		}
@@ -236,6 +257,35 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		}
 
 	}
+
+	private ChatRoom getRoom(String roomId)
+	{
+		ChatRoom chatRoom = null;
+
+		try {
+			chatRoom = chatManager.getChatContainer().getChatRoom(roomId);
+
+		}
+		catch (Exception e) {
+
+			try {
+				chatRoom = chatManager.getChatContainer().getChatRoom(getBare(roomId));
+			}
+			catch (Exception e1) {
+
+				try {
+
+					Thread.sleep(2500);
+				}
+				catch (Exception e2) { }
+
+				chatRoom = chatManager.getChatRoom(getBare(roomId));
+			}
+		}
+
+		return chatRoom;
+	}
+
 
 	private String getTag(String xml, String tag) {
 		String tagValue = null;
@@ -255,10 +305,14 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		return (tagValue);
 	}
 
-    private void showInvitationAlert(final int width, final int height, final ChatRoom room, final String nickname, final String prompt, final String url)
+    private JPanel showInvitationAlert(final int width, final int height, final String roomID, final String nickname, final String prompt, final String url, final String windowType)
     {
-        final ChatRoom chatroom = room;
-        inviteAlert = new JPanel();
+		final String roomId = roomID;
+        final String buttonType = windowType;
+        final JPanel inviteAlert = new JPanel();
+
+        ChatRoom chatroom = getRoom(roomId);
+        setButton(chatroom, buttonType, false);
         inviteAlert.setLayout(new BorderLayout());
 
         JPanel invitePanel = new JPanel()
@@ -286,9 +340,11 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
         {
             public void actionPerformed(ActionEvent e)
             {
+				ChatRoom chatroom = getRoom(roomId);
+				BareBonesBrowserLaunch.openURL(width, height, url, chatroom.getRoomname() + buttonType);
+        		setButton(chatroom, buttonType, true);
 				inviteAlert.setVisible(false);
 				chatroom.getTranscriptWindow().remove(inviteAlert);
-				BareBonesBrowserLaunch.openURL(width, height, url, chatroom.getRoomTitle());
             }
         });
         buttonPanel.add(acceptButton);
@@ -299,6 +355,8 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
         {
             public void actionPerformed(ActionEvent e)
             {
+				ChatRoom chatroom = getRoom(roomId);
+        		setButton(chatroom, buttonType, true);
 				inviteAlert.setVisible(false);
  				chatroom.getTranscriptWindow().remove(inviteAlert);
             }
@@ -313,17 +371,54 @@ public class Red5Plugin implements Plugin, ChatRoomListener, PacketListener, Pac
 		} catch (Exception e) {}
 
         chatroom.getTranscriptWindow().addComponent(inviteAlert);
+
+        return inviteAlert;
     }
+
+	private void setButton(ChatRoom chatroom, String windowType, boolean flag)
+	{
+		String roomId = chatroom.getRoomname();
+
+		if (decorators.containsKey(roomId))
+		{
+			Red5ChatRoomDecorator decorator = decorators.get(roomId);
+
+			if ("_screen".equals(windowType))
+				decorator.screenButton.setEnabled(flag);
+			else
+				decorator.red5Button.setEnabled(flag);
+		}
+	}
+
 
     public boolean isMessageIntercepted(TranscriptWindow window, String userid, Message message)
     {
-		RedfireExtension redfireExtension = (RedfireExtension) message.getExtension("redfire-invite", "http://redfire.4ng.net/xmlns/redfire-invite");
+		String xml = message.toXML();
 
-		if (redfireExtension != null && "error".equals(message.getType().toString()) == false)
+		if (xml.indexOf("http://redfire.4ng.net/xmlns/redfire-invite") > -1)
 		{
+			if (xml.indexOf("<roomType>groupchat</roomType>") > -1)
+			{
+				try {
+					ChatRoom chatRoom = chatManager.getChatContainer().getActiveChatRoom();
+					chatManager.getChatContainer().closeTab(chatRoom);
+
+				} catch (Exception e) {}
+			}
+
 			return true;
 		}
         return false;
     }
 
+	private String getBare(String jid)
+	{
+		String node = jid;
+		int pos = node.indexOf("/");
+
+		if (pos > -1)
+			node = jid.substring(0, pos);
+
+		return node;
+	}
 }

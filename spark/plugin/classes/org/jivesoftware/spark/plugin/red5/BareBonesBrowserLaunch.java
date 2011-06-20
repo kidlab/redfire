@@ -37,9 +37,11 @@
 package org.jivesoftware.spark.plugin.red5;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.*;
 import javax.swing.*;
 import java.util.*;
+
 
 import org.jivesoftware.spark.SparkManager;
 import org.jivesoftware.spark.component.browser.*;
@@ -58,6 +60,20 @@ public class BareBonesBrowserLaunch {
     * Opens the specified web page in the user's default browser
     * @param url A web address (URL) of a web page (ex: "http://www.google.com/")
     */
+
+   public static void closeURL(String title)
+   {
+	   	if (windows.containsKey(title))
+	   	{
+			JFrame frame = windows.get(title);
+			frame.dispose();
+			windows.remove(title);
+
+			BrowserViewer viewer = viewers.get(title);
+			viewers.remove(title);
+
+		}
+   }
 
    public static void openURL(int width, int height, String url, String title)
    {
@@ -150,6 +166,39 @@ public class BareBonesBrowserLaunch {
 
 					BrowserViewer viewer = viewers.get(title);
 					viewers.remove(title);
+				}
+			});
+
+			frame.addComponentListener(new ComponentListener()
+			{
+				public void componentResized(ComponentEvent evt)
+				{
+					Log.warning("BareBonesBrowserLaunch.componentResized name: " + evt.getComponent().getName());
+
+					JFrame frame = (JFrame)evt.getComponent();
+					String title = frame.getTitle();
+
+					Log.warning("BareBonesBrowserLaunch.componentResized title: " + title);
+
+					NativeBrowserViewer viewer = (NativeBrowserViewer) viewers.get(title);
+					viewer.setSize(frame.getWidth(), frame.getHeight());
+					viewer.reloadURL();
+					viewer.repaint();
+				}
+
+				public void componentHidden(ComponentEvent componentEvent)
+				{
+
+				}
+
+				public void componentMoved(ComponentEvent componentEvent)
+				{
+
+				}
+
+				public void componentShown(ComponentEvent componentEvent)
+				{
+
 				}
 			});
 

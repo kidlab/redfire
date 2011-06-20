@@ -16,7 +16,10 @@
 	{
 		if (screenViewer != null)
 		{
-			screenViewer.windowCloseEvent();
+			try {
+				screenViewer.windowCloseEvent();
+			} catch (e) {}
+
 		}
 	}
 

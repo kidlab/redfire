@@ -32,6 +32,8 @@ import org.jivesoftware.spark.component.browser.*;
 class NativeBrowserViewer extends BrowserViewer  implements WebBrowserListener
 {
     private WebBrowser browser;
+    private String url;
+
     public static final long serialVersionUID = 24362462L;
 
     public void initializeBrowser()
@@ -49,8 +51,23 @@ class NativeBrowserViewer extends BrowserViewer  implements WebBrowserListener
         browser.addWebBrowserListener(this);
     }
 
+    public void reloadURL()
+    {
+        try
+        {
+            browser.setURL(new URL(url));
+        }
+        catch(MalformedURLException e)
+        {
+            Log.error(e);
+        }
+	}
+
+
     public void loadURL(String url)
     {
+		this.url = url;
+
         try
         {
             browser.setURL(new URL(url));
