@@ -65,7 +65,7 @@ public class RTMPCallAgent extends CallSetupAgent
 	public void initiateCall() throws IOException
 	{
 		try {
-			rtmpParticipant.startStream(Config.getInstance().getPrivateHost(), "voicebridge", 1935, cp.getRtmpSendStream(), cp.getRtmpRecieveStream(), conferenceStartTime);
+			rtmpParticipant.startStream(Config.getInstance().getPrivateHost(), "xmpp", 1935, cp.getRtmpSendStream(), cp.getRtmpRecieveStream(), conferenceStartTime);
 			setState(CallState.ESTABLISHED);
 
 		} catch (Exception e) {

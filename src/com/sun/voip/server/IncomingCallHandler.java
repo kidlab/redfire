@@ -117,8 +117,7 @@ public class IncomingCallHandler extends CallHandler
 				} else {
 
 					Logger.println("Incoming SIP, call using called phone id as conference " + cp);
-					cp.setConferenceId(cp.getToPhoneNumber());
-					haveIncomingConferenceId = true;
+					cp.setConferenceId(defaultIncomingConferenceId); // wait in lobby
 				}
 
 			} else {
@@ -166,11 +165,8 @@ public class IncomingCallHandler extends CallHandler
 
 			if (!done && member != null)
 			{
-				if (member.getCallParticipant().getConferenceId().indexOf(defaultIncomingConferenceId) == 0) {
-
-					Logger.println("Incoming call " + member + " call transfer timedout");
-					cancelRequest("Incoming call wasn't transferred");
-				}
+				Logger.println("Incoming call " + member + " call transfer timedout");
+				cancelRequest("Incoming call wasn't transferred");
 			}
 		}
     }
@@ -181,7 +177,8 @@ public class IncomingCallHandler extends CallHandler
      */
     public void run()
     {
-		if (haveIncomingConferenceId == false) {
+		if (haveIncomingConferenceId == false)
+		{
 			cp.setConferenceId(defaultIncomingConferenceId);
 		}
 

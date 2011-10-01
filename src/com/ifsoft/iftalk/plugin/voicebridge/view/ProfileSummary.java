@@ -25,23 +25,27 @@ import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.user.User;
 import org.jivesoftware.openfire.user.UserNotFoundException;
 
-import com.ifsoft.iftalk.plugin.voicebridge.RedfirePlugin;
+import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgePlugin;
 import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgeComponent;
 import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgeUser;
 import com.ifsoft.iftalk.plugin.voicebridge.Site;
 import com.ifsoft.iftalk.plugin.voicebridge.SiteDao;
 import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgeCallback;
 
+import org.red5.server.webapp.voicebridge.Application;
+
+
+
 public class ProfileSummary extends HttpServlet {
 
-	private RedfirePlugin plugin;
+	private VoiceBridgePlugin plugin;
 	private SiteDao siteDao;
     private Collection<Site> sites;
 	protected Logger Log = Logger.getLogger(getClass().getName());
 
     public void init(ServletConfig servletConfig) throws ServletException {
         super.init(servletConfig);
-		plugin = (RedfirePlugin)XMPPServer.getInstance().getPluginManager().getPlugin("redfire");
+		plugin = Application.plugin;
     }
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

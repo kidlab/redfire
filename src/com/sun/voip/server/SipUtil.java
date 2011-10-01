@@ -317,7 +317,7 @@ if (false) {
          * <tpccName> is the identifier of who's making the call.
          */
 	String fromName = cp.getDisplayName();
-	String fromNumber = "voicebridge";
+	String fromNumber = cp.getFromPhoneNumber() != null ? cp.getFromPhoneNumber() : "voicebridge";
 	String toNumber = cp.getPhoneNumber();
 
         // int toSipPort = SipServer.getSipAddress().getPort();
@@ -449,24 +449,44 @@ if (false) {
 	{
 		if (proxyCredentialList.size() == 0)
 		{
-			int voipIndex = 0;
+			int voipIndex = -1;
 
-			for (int i=0; i<proxyCredentialList.size(); i++)
+			for (int i=0; i<proxyCredentialList.size(); i++)					// first we check a specific from phone number
 			{
 				ProxyCredentials proxyCredentials = proxyCredentialList.get(i);
 
-				if (voipGateway.equals(proxyCredentials.getProxy()))
+				if (fromNumber.equals(proxyCredentials.getXmppUserName()))
 				{
 					voipIndex = i;
+					break;
 				}
 			}
 
-			ProxyCredentials proxyCredentials = proxyCredentialList.get(voipIndex);
+			if (voipIndex == -1)
+			{
+				voipIndex = 0;
+
+				for (int i=0; i<proxyCredentialList.size(); i++)					// next we settle for specific generic proxy
+				{
+					ProxyCredentials proxyCredentials = proxyCredentialList.get(i);
+
+					if (voipGateway.equals(proxyCredentials.getProxy()))
+					{
+						voipIndex = i;
+						break;
+					}
+				}
+			}
+
+
+			ProxyCredentials proxyCredentials = proxyCredentialList.get(voipIndex);// otherwise we use the first proxy as default
 
 			fromName = proxyCredentials.getUserDisplay();
+			fromNumber = proxyCredentials.getUserName();
+			fromAddress = addressFactory.createSipURI(fromNumber, voipGateway);
+
 			voipGateway = proxyCredentials.getHost();
 			obProxy = proxyCredentials.getProxy();
-			fromAddress = addressFactory.createSipURI(proxyCredentials.getUserName(), voipGateway);
 
        	 	cp.setProxyCredentials(proxyCredentials);				// we need this to match SIP transaction later
         	cp.setDisplayName(proxyCredentials.getUserDisplay());	// we need this to get proxy authentication details later

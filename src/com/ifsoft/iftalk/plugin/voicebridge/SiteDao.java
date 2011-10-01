@@ -28,9 +28,9 @@ public class SiteDao extends AbstractSiteDao {
 
 	private static final String DELETE_SITE = "DELETE FROM ofvoicebridge WHERE siteID = ?";
 
-	private RedfirePlugin plugin;
+	private VoiceBridgePlugin plugin;
 
-	public SiteDao(RedfirePlugin plugin)
+	public SiteDao(VoiceBridgePlugin plugin)
 	{
 		this.plugin = plugin;
 	}

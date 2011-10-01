@@ -16,25 +16,22 @@ import org.apache.log4j.Logger;
 
 import org.jivesoftware.util.Log;
 import org.jivesoftware.openfire.XMPPServer;
-import org.jivesoftware.openfire.container.Plugin;
-import org.jivesoftware.openfire.container.PluginManager;
 
-import com.ifsoft.iftalk.plugin.voicebridge.RedfirePlugin;
+import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgePlugin;
 import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgeComponent;
 import com.ifsoft.iftalk.plugin.voicebridge.Site;
 import com.ifsoft.iftalk.plugin.voicebridge.SiteDao;
 
+import org.red5.server.webapp.voicebridge.Application;
 
 public class VoiceBridgeSummary extends HttpServlet {
 
 	private long   siteID;
 	private SiteDao siteDao;
-	private RedfirePlugin plugin;
 	protected Logger Log = Logger.getLogger(getClass().getName());
 
     public void init(ServletConfig servletConfig) throws ServletException {
         super.init(servletConfig);
-		plugin = (RedfirePlugin)XMPPServer.getInstance().getPluginManager().getPlugin("redfire");
     }
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -46,7 +43,7 @@ public class VoiceBridgeSummary extends HttpServlet {
 		response.setHeader("Connection", "close");
 
 		ServletOutputStream out = response.getOutputStream();
-		siteDao = new SiteDao(plugin);
+		siteDao = new SiteDao(Application.plugin);
 		String action = request.getParameter("action");
 
 		if(request.getParameter("siteID") != null) {
@@ -85,7 +82,7 @@ public class VoiceBridgeSummary extends HttpServlet {
 		else if(action.equals("resetSite")) {
 
 			String siteID = request.getParameter("site");
-			VoiceBridgeComponent voicebridgeComponent = plugin.getVoiceBridgeComponentBySiteID(siteID);
+			VoiceBridgeComponent voicebridgeComponent = Application.plugin.getVoiceBridgeComponentBySiteID(siteID);
 
 			if (voicebridgeComponent != null)
 			{
@@ -107,7 +104,7 @@ public class VoiceBridgeSummary extends HttpServlet {
 		    } else {
 
 				try {
-					plugin.resetComponentCaches();
+					Application.plugin.resetComponentCaches();
 
 					displayPage(out, "Reset of Caches for all sites have been scheduled as background tasks");
 				}
@@ -148,7 +145,7 @@ public class VoiceBridgeSummary extends HttpServlet {
 
 			out.println("");
 			out.println("<br>");
-			out.println("<div id='jive-title'>" + plugin.lastLoadedDate == null ? "&nbsp" : "Active since "  + plugin.lastLoadedDate  + "</div>");
+			out.println("<div id='jive-title'>" + Application.plugin.lastLoadedDate == null ? "&nbsp" : "Active since "  + Application.plugin.lastLoadedDate  + "</div>");
             out.println("<div class=\"jive-table\">");
             out.println("<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\">");
             out.println("<thead>");
@@ -167,7 +164,7 @@ public class VoiceBridgeSummary extends HttpServlet {
 
             while(iter4.hasNext()) {
                 Site site = (Site)iter4.next();
-				VoiceBridgeComponent voicebridgeComponent = plugin.getVoiceBridgeComponentBySiteID(String.valueOf(site.getSiteID()));
+				VoiceBridgeComponent voicebridgeComponent = Application.plugin.getVoiceBridgeComponentBySiteID(String.valueOf(site.getSiteID()));
 
                 if(site != null) {
                     if(i % 2 == 1)

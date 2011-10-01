@@ -76,10 +76,10 @@ public class TwoPartyCallHandler extends Thread {
 	}
 
 	cp2.setPhoneNumber(cp.getSecondPartyNumber());
+	cp2.setFromPhoneNumber(cp.getFromPhoneNumber());
 	cp2.setVoiceDetection(cp.getSecondPartyVoiceDetection());
 
-	OutgoingCallHandler callHandler2 =
-	    new OutgoingCallHandler(callEventListener, cp2);
+	OutgoingCallHandler callHandler2 = new OutgoingCallHandler(callEventListener, cp2);
 
 	synchronized(this) {
  	    /*

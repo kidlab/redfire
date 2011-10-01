@@ -121,25 +121,23 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 
     public String manageCallParticipant(JID userJID, String uid, String parameter, String value)
     {
-		//return Application.getInstance().manageCallParticipant(userJID, uid, parameter, value);
-
-		return null;
+		return VoiceBridgePlugin.application.manageCallParticipant(userJID.toString(), uid, parameter, value);
 	}
 
     public void handleMessage(Message received)
     {
-		//Application.getInstance().handleMessage(received);
+		VoiceBridgePlugin.application.handleMessage(received);
     }
 
 	public void interceptMessage(Message received)
 	{
-		//Application.getInstance().interceptMessage(received);
+
 
 	}
 
 	public void handlePostBridge(List<String> uids)
 	{
-		//Application.getInstance().handlePostBridge(uids);
+		VoiceBridgePlugin.application.handlePostBridge(uids);
 	}
 
 
@@ -509,411 +507,7 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 
 	public void handleVDISMessage(Object source, String sVDISEventMessage)
 	{
-/*
-		String sCallNo 					= null;
-		String sVDISVoiceBridgeLineNo 			= null;
-		String sVDISVoiceBridgeLineNo2 			= null;
-		String sVDISVoiceBridgeLineName 		= null;
-		String sVDISVoiceBridgeConsoleNo 		= null;
-		String sVDISVoiceBridgeUserNo 			= null;
-		String sClientId 				= null;
-		String sVDISHandsetOrSpeaker 	= null;
-		String sVDISSpeakerNo 			= null;
-		String sVDISHandsetNo 			= null;
-		String sVDISVoiceBridgeFlag 			= null;
-		String sVDISVoiceBridgeCallset 			= null;
-		String sVDISVoiceBridgeFunction 		= null;
-		String sVDISVoiceBridgeGroup 			= null;
-		String sVDISVoiceBridgeKeystate 		= null;
-		String sRealVDISDDI 			= null;
-		String sVDISDDI 				= null;
 
-		try {
-			String sVDISMessageId = sVDISEventMessage.substring(1,4);
-			int nVDISMessageId = Integer.parseInt(sVDISMessageId);
-			int nVDISMessagePayloadLength = Integer.parseInt(sVDISEventMessage.substring(4,6));
-			String sVDISMessagePayload = sVDISEventMessage.substring(6);
-
-			if (nVDISMessagePayloadLength > 0 )
-			{
-				if (sVDISMessagePayload.indexOf("\\") > -1) {
-					sVDISMessagePayload = oldReplace(sVDISMessagePayload, "\\", "\\\\");
-				}
-			}
-
-			if (!voicebridgeConnected) {
-				voicebridgeConnected = true;
-				Log.info( "["+ siteName + "] Connected VoiceBridgelink for " + siteName);
-			}
-
-			if (component.voicebridgeLdapService == null)
-			{
-				return;
-			}
-
-			switch( nVDISMessageId )
-			{
-				case VDIS_SERVER_MSG_ID_HEARTBEAT:
-						deleteExpiredCalls();
-						break;
-
-    			case VDIS_SERVER_MSG_ID_VERSION:
-    					voicebridgeLinkVersion = String.valueOf(Integer.parseInt(sVDISMessagePayload.substring(0, 3))) + "." + String.valueOf(Integer.parseInt(sVDISMessagePayload.substring(3, 6))) + "." + String.valueOf(Integer.parseInt(sVDISMessagePayload.substring(6, 9))) + " " + sVDISMessagePayload.substring(9, 10);
-    					break;
-
-				case VDIS_SERVER_MSG_ID_INCOMING:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-						sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-						voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-						voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-
-						sVDISVoiceBridgeLineName = sVDISMessagePayload.substring(20, 40).trim();
-						sRealVDISDDI = sVDISMessagePayload.substring(40, 52);
-						sVDISDDI = sVDISMessagePayload.substring(52, 57);
-						handleCallIncoming(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sRealVDISDDI, sVDISDDI);
-						break;
-
-				case VDIS_SERVER_MSG_ID_ABANDONED:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							handleCallAbandoned(sCallNo, sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call abandoned. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-						break;
-
-				case VDIS_SERVER_MSG_ID_CONNECT_CHANGE:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-							voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-							voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-						}
-
-						sVDISVoiceBridgeLineName = sVDISMessagePayload.substring(20, 40).trim();
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(40, 50);
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(50 ,62);
-						String sVDISOldLineState = sVDISMessagePayload.substring(62, 63);
-						String sVDISNewLineState = sVDISMessagePayload.substring(63, 64);
-						sVDISHandsetOrSpeaker = sVDISMessagePayload.substring(64, 65);
-						sVDISSpeakerNo = sVDISMessagePayload.substring(65, 67);
-						sVDISHandsetNo = sVDISMessagePayload.substring(67, 68);
-						String sVDISConnectOrDisconnect = sVDISMessagePayload.substring(68, 69);
-
-						boolean callbackEvent = false;
-
-						if (callbacks.containsKey(sVDISVoiceBridgeConsoleNo+sVDISHandsetNo))
-						{
-							VoiceBridgeCallback voicebridgeCallback = callbacks.get(sVDISVoiceBridgeConsoleNo+sVDISHandsetNo);
-
-							if (voicebridgeCallback.getVoiceBridgeUser() != null)
-							{
-								handleVoiceConnectChange(voicebridgeCallback, sVDISVoiceBridgeLineNo, sVDISOldLineState, sVDISNewLineState,  sVDISConnectOrDisconnect);
-								callbackEvent = true;
-							}
-						}
-
-						if (!callbackEvent)
-						{
-							handleCallConnected(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-						}
-						break;
-
-				case VDIS_SERVER_MSG_ID_CALL_PROGRESS:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							String sVDISChannelNo = sVDISMessagePayload.substring(20, 22);
-							sVDISVoiceBridgeFlag = sVDISMessagePayload.substring(22, 23);
-							handleCallProgress(sCallNo, sVDISVoiceBridgeLineNo, sVDISChannelNo, sVDISVoiceBridgeFlag);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call progress. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_CALL_PROCEEDING:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							String sDigits = sVDISMessagePayload.substring(20, 28);
-							String sEndFlag = sVDISMessagePayload.substring(28, 29);
-							handleCallProceeding(sCallNo, sVDISVoiceBridgeLineNo, sDigits, sEndFlag);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call proceeding. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_PRIVATE:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(20, 30);
-							sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(30, 42);
-							sVDISHandsetNo = sVDISMessagePayload.substring(42, 43);
-							String sPrivacyOn = sVDISMessagePayload.substring(43, 44);
-							handleCallPrivate(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISHandsetNo, sPrivacyOn);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call private. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_DIALED_DIGVoiceBridge:
-						break;
-
-				case VDIS_SERVER_MSG_ID_INTERCOM:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-							voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-							voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-						}
-
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(20, 30);
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(30, 42);
-						String sIntercomUserNo = sVDISMessagePayload.substring(42, 54);
-						handleIntercom(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sIntercomUserNo);
-						break;
-
-				case VDIS_SERVER_MSG_ID_PLATFORM_INTERCOM:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-							voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-							voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-						}
-
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(20, 30);
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(30, 42);
-						sIntercomUserNo = sVDISMessagePayload.substring(42, 54);
-						handleIntercom(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sIntercomUserNo);
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_TRANSFER:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(20, 30);
-							sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(30, 42);
-							String sTransferUserNo = sVDISMessagePayload.substring(42, 54);
-							handleTransfer(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sTransferUserNo);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call transfer. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_GROUP_TRANSFER:
-						break;
-
-				case VDIS_SERVER_MSG_ID_CLI_DETAILS:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							String cliDigits = sVDISMessagePayload.substring(20, 50);
-							handleCallCLI(sCallNo, sVDISVoiceBridgeLineNo, cliDigits);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call cli. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_LINE_INFO:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							sVDISVoiceBridgeLineName = sVDISMessagePayload.substring(20, 40).trim();
-							sVDISNewLineState = sVDISMessagePayload.substring(40, 41);
-
-							String speakerCount = sVDISMessagePayload.substring(41, 43);
-							String handsetCount = sVDISMessagePayload.substring(43, 45);
-							String direction = sVDISMessagePayload.substring(45, 46);
-							String sPrivacyOn = sVDISMessagePayload.substring(46, 47);
-							sRealVDISDDI = sVDISMessagePayload.substring(47, 59);
-							String lineType = sVDISMessagePayload.substring(59, 62);
-							String sELC = sVDISMessagePayload.substring(62, 66);
-
-							handleCallInfo(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISNewLineState, speakerCount, handsetCount, direction, sPrivacyOn, sRealVDISDDI, lineType, sELC);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call info. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_ELC:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-							voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-							voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-						}
-
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(20, 30);
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(30, 42);
-						sVDISHandsetNo = sVDISMessagePayload.substring(42, 43);
-						String sELC = sVDISMessagePayload.substring(43, 47);
-						String sConnectOrDisconnect = sVDISMessagePayload.substring(47, 48);
-						handleCallELC(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISHandsetNo, sELC, sConnectOrDisconnect);
-						break;
-
-				case VDIS_SERVER_MSG_ID_CALL_MOVED:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-							sVDISVoiceBridgeLineNo2 = sVDISMessagePayload.substring(20, 30);
-							handleCallMoved(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineNo2);
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call moved. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				case VDIS_SERVER_MSG_ID_CALL_OUTGOING:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							sCallNo = makeCallNo(sVDISVoiceBridgeLineNo);
-							voicebridgeCallIds.put(sVDISVoiceBridgeLineNo, sCallNo);
-							voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo);
-						}
-
-						sRealVDISDDI = sVDISMessagePayload.substring(20, 32);
-						sVDISDDI = sVDISMessagePayload.substring(32, 37);
-						sVDISVoiceBridgeLineName = sVDISMessagePayload.substring(37, 57).trim();
-						handleCallOutgoing(sCallNo, sVDISVoiceBridgeLineNo, sRealVDISDDI, sVDISDDI, sVDISVoiceBridgeLineName);
-						break;
-
-				case VDIS_SERVER_MSG_ID_CONSOLE_NO:
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(0, 12);
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(12, 22);
-						String sVDISVoiceBridgeConsoleNoOld = sVDISMessagePayload.substring(22, 32);
-
-						handleConsoleNo(sVDISVoiceBridgeUserNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeConsoleNoOld);
-						break;
-
-				case VDIS_SERVER_MSG_ID_ECKEY:
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(0, 10);
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(10, 22);
-						sVDISVoiceBridgeGroup = sVDISMessagePayload.substring(22, 25);
-						sVDISVoiceBridgeFunction = sVDISMessagePayload.substring(25, 30);
-						sVDISHandsetNo = sVDISMessagePayload.substring(30, 31);
-						sVDISVoiceBridgeKeystate = sVDISMessagePayload.substring(31, 34);
-						handleConsoleECKey(sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISVoiceBridgeGroup, sVDISVoiceBridgeFunction, sVDISHandsetNo, sVDISVoiceBridgeKeystate);
-						break;
-
-				case VDIS_SERVER_MSG_ID_FREE_SEATING:
-						sVDISVoiceBridgeUserNo = sVDISMessagePayload.substring(0, 12);
-						String sVDISVoiceBridgeUserName = sVDISMessagePayload.substring(12, 32);
-						sVDISVoiceBridgeConsoleNo = sVDISMessagePayload.substring(32, 42);
-						String sVDISVoiceBridgeConsoleName = sVDISMessagePayload.substring(42, 62);
-						String sVDISVoiceBridgeGroupNo = sVDISMessagePayload.substring(62, 67);
-						String sVDISVoiceBridgeGroupName = sVDISMessagePayload.substring(67, 87);
-						String sVDISVoiceBridgeConsoleType = sVDISMessagePayload.substring(87, 90);
-						handleFreeSeating(sVDISVoiceBridgeUserNo, sVDISVoiceBridgeConsoleNo);
-						break;
-
-				case VDIS_SERVER_MSG_ID_RECALL_TRANSFER:
-						sVDISVoiceBridgeLineNo = sVDISMessagePayload.substring(10, 20);
-
-						if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-						{
-							sCallNo = voicebridgeCallIds.get(sVDISVoiceBridgeLineNo);
-							sVDISVoiceBridgeLineNo2 = sVDISMessagePayload.substring(20, 30);
-							String transferStatus = sVDISMessagePayload.substring(52, 53);
-							handleRecallTransfer(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineNo2, transferStatus);
-
-
-						} else {
-
-							Log.warn( "["+ siteName + "] Call recall transfer. cannot find call id for line " + sVDISVoiceBridgeLineNo);
-						}
-
-						break;
-
-				default:
-						break;
-			}
-
-		}
-		catch(Exception e) {
-
-        	Log.error("handleVDISMessage error " + e + "\n" + sVDISEventMessage);
-        	e.printStackTrace();
-        }
-        */
 	}
 
 	private String makeCallNo(String sVDISVoiceBridgeLineNo)
@@ -933,719 +527,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 //
 //
 //-------------------------------------------------------
-
-    private void handleConsoleECKey(String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sVDISVoiceBridgeGroup, String sVDISVoiceBridgeFunction, String sVDISHandsetNo, String sVDISVoiceBridgeKeystate)
-    {
-		Log.debug( "["+ siteName + "] handleConsoleECKey " + sVDISVoiceBridgeUserNo + " " + sVDISVoiceBridgeGroup + " " + sVDISVoiceBridgeFunction + " " + sVDISHandsetNo + " " + sVDISVoiceBridgeKeystate);
-
-		String userKey = String.valueOf(Long.parseLong(sVDISVoiceBridgeUserNo));
-
-		if (component.voicebridgeLdapService.voicebridgeUserTable.containsKey(userKey))
-		{
-			VoiceBridgeUser voicebridgeUser = component.voicebridgeLdapService.voicebridgeUserTable.get(userKey);
-
-			String featureId = "vm_" + Integer.parseInt(sVDISVoiceBridgeFunction);
-			VMessage message = component.voicebridgeVmsService.getVMessageFromName(voicebridgeUser, featureId);
-
-			// validate that user has access to message
-
-			if (message != null)
-			{
-				if ("020".equals(sVDISVoiceBridgeGroup) && isVoiceDropAvailable())
-				{
-					handleVMRecordECKey(voicebridgeUser, sVDISHandsetNo, message, sVDISVoiceBridgeFunction, sVDISVoiceBridgeKeystate);
-				}
-				else
-
-				if ("021".equals(sVDISVoiceBridgeGroup) && isVoiceDropAvailable())
-				{
-					handleVMPlaybackECKey(voicebridgeUser, sVDISHandsetNo, message, sVDISVoiceBridgeFunction, sVDISVoiceBridgeKeystate);
-				}
-
-			} else Log.warn("["+ siteName + "] handleConsoleECKey cannot find message " + featureId);
-
-		} else Log.warn("["+ siteName + "] handleConsoleECKey cannot find user " + userKey);
-	}
-
-
-	private void handleVMRecordECKey(VoiceBridgeUser voicebridgeUser, String sVDISHandsetNo, VMessage message, String sVDISVoiceBridgeFunction, String sVDISVoiceBridgeKeystate)
-	{
-		if ("103".equals(sVDISVoiceBridgeKeystate)) // ready, record
-		{
-			String exten = component.voicebridgeVmsService.recordMessage(voicebridgeUser, message.getName(), message.getComment(), message.getId());
-			voicebridgeUser.selectCallset(component, voicebridgeUser.getCallset(), sVDISHandsetNo, null, null, exten);
-
-			setECKey(voicebridgeUser.getDeviceNo(), "020", sVDISVoiceBridgeFunction, "105");
-		}
-		else
-
-		if ("105".equals(sVDISVoiceBridgeKeystate)) // busy  cancel record
-		{
-			setECKey(voicebridgeUser.getDeviceNo(), "020", sVDISVoiceBridgeFunction, "103"); // also set when VMS event arrives
-		}
-	}
-
-	private void handleVMPlaybackECKey(VoiceBridgeUser voicebridgeUser, String sVDISHandsetNo, VMessage message, String sVDISVoiceBridgeFunction, String sVDISVoiceBridgeKeystate)
-	{
-		VoiceBridgeCall voicebridgeCall1 = voicebridgeUser.getCurrentHS1Call();
-		VoiceBridgeCall voicebridgeCall2 = voicebridgeUser.getCurrentHS2Call();
-
-		if ("103".equals(sVDISVoiceBridgeKeystate)) // ready, record
-		{
-			// if we are on a call, drop otherwise playback
-
-			if ("1".equals(sVDISHandsetNo) && voicebridgeCall1 != null) // drop
-			{
-				String exten = component.voicebridgeVmsService.getVMExtenToDial(voicebridgeUser, message.getId(), message.getName());
-				addExternalCall(voicebridgeCall1.getLine(), component.makeDialableNumber(exten));
-
-				//setECKey(voicebridgeUser.getDeviceNo(), "021", sVDISVoiceBridgeFunction, "105");
-
-			} else if ("2".equals(sVDISHandsetNo) && voicebridgeCall2 != null) {
-
-				String exten = component.voicebridgeVmsService.getVMExtenToDial(voicebridgeUser, message.getId(), message.getName());
-				addExternalCall(voicebridgeCall2.getLine(), component.makeDialableNumber(exten));
-
-				//setECKey(voicebridgeUser.getDeviceNo(), "021", sVDISVoiceBridgeFunction, "105");
-
-			} else {	// playback
-
-				String exten = component.voicebridgeVmsService.getVMExtenToDial(voicebridgeUser, message.getId(), message.getName());
-				voicebridgeUser.selectCallset(component, voicebridgeUser.getCallset(), sVDISHandsetNo, null, null, exten);
-
-				//setECKey(voicebridgeUser.getDeviceNo(), "021", sVDISVoiceBridgeFunction, "105");
-			}
-
-		}
-		else
-
-		if ("105".equals(sVDISVoiceBridgeKeystate)) // busy  cancel record
-		{
-			setECKey(voicebridgeUser.getDeviceNo(), "021", sVDISVoiceBridgeFunction, "103"); // also set when VMS event arrives
-		}
-
-	}
-
-
-    private void handleCallInfo(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineName, String sVDISNewLineState, String speakerCount, String handsetCount, String direction, String sPrivacyOn, String sRealVDISDDI, String lineType, String sELC)
-    {
-		Log.debug( "["+ siteName + "] handleCallInfo " + sVDISVoiceBridgeLineNo);
-
-		Iterator it = component.voicebridgeLdapService.voicebridgeInterests.values().iterator();
-
-		while( it.hasNext())	// we must search all interests to find which call to be restored
-		{
-			VoiceBridgeInterest voicebridgeInterest = (VoiceBridgeInterest)it.next();
-
-			Iterator it2 = voicebridgeInterest.getUserInterests().values().iterator();
-			boolean interested = false;
-
-			while( it2.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it2.next();
-
-        		if (voicebridgeUserInterest.getCallByNo(sCallNo) != null)
-        		{
-					Log.debug( "["+ siteName + "] handleCallInfo found call " + sCallNo);
-
-					voicebridgeUserInterest.handleCallInfo(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISNewLineState, speakerCount, handsetCount, direction, sPrivacyOn, sRealVDISDDI, lineType, sELC);
-					interested = true;
-				}
-			}
-
-			if (interested)			// we are now interested in this line, so associate with interest
-			{
-				lineInterests.put(sVDISVoiceBridgeLineNo, voicebridgeInterest);
-			}
-		}
-	}
-
-	private void handleCallELC(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineName, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sVDISHandsetNo, String sELC, String sVDISConnectOrDisconnect)
-	{
-		Log.debug( "["+ siteName + "] handleCallELC " + sVDISVoiceBridgeLineNo + " " + sVDISVoiceBridgeUserNo + " " + sVDISConnectOrDisconnect);
-
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, sVDISVoiceBridgeUserNo);
-
-		if (lineInterest != null)
-		{
-			String userKey = String.valueOf(Long.parseLong(sVDISVoiceBridgeUserNo));
-
-			if (lineInterest.getUserInterests().containsKey(userKey))
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = lineInterest.getUserInterests().get(userKey);
-				voicebridgeUserInterest.handleCallELC(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISHandsetNo, sELC, sVDISConnectOrDisconnect);
-
-				publishVoiceBridgeUserCallEvent(voicebridgeUserInterest);
-			}
-		}
-	}
-
-	private void handleCallOutgoing(String sCallNo, String sVDISVoiceBridgeLineNo, String sRealVDISDDI, String sVDISDDI, String sVDISVoiceBridgeLineName)
-	{
-		VoiceBridgeInterest lineInterest = getDDIInterest(sRealVDISDDI);
-
-		if (lineInterest != null)
-		{
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallOutgoing(sCallNo, sVDISVoiceBridgeLineNo, sRealVDISDDI, sVDISDDI, sVDISVoiceBridgeLineName);
-			}
-			lineInterests.put(sVDISVoiceBridgeLineNo, lineInterest);
-		}
-	}
-
-	private void handleConsoleNo(String sVDISVoiceBridgeUserNo, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeConsoleNoOld)
-	{
-		String userKey = String.valueOf(Long.parseLong(sVDISVoiceBridgeUserNo));
-
-		if (component.voicebridgeLdapService.voicebridgeUserTable.containsKey(userKey))
-		{
-			VoiceBridgeUser voicebridgeUser = component.voicebridgeLdapService.voicebridgeUserTable.get(userKey);
-			voicebridgeUser.setDeviceNo(sVDISVoiceBridgeConsoleNo);
-			voicebridgeUser.processConsoleNextSteps(component);
-
-			if (!sVDISVoiceBridgeConsoleNo.equals("0000000000")) // login
-			{
-				if (isVoiceDropAvailable())
-				{
-					component.voicebridgeVmsService.setupUser(voicebridgeUser);
-				}
-			}
-
-		}
-	}
-
-
-	private void handleFreeSeating(String sVDISVoiceBridgeUserNo, String sVDISVoiceBridgeConsoleNo)
-	{
-		String userKey = String.valueOf(Long.parseLong(sVDISVoiceBridgeUserNo));
-
-		if (component.voicebridgeLdapService.voicebridgeUserTable.containsKey(userKey))
-		{
-			VoiceBridgeUser voicebridgeUser = component.voicebridgeLdapService.voicebridgeUserTable.get(userKey);
-			voicebridgeUser.setDeviceNo(sVDISVoiceBridgeConsoleNo);
-			voicebridgeUser.processConsoleNextSteps(component);
-		}
-	}
-
-	private void handleCallPrivate(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sVDISHandsetNo, String sPrivacyOn)
-	{
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, sVDISVoiceBridgeUserNo);
-
-		if (lineInterest!= null)
-		{
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-
-				Log.debug( "["+ siteName + "] handleCallPrivate - handling user interest " + voicebridgeUserInterest.getUser().getUserId() + " " + voicebridgeUserInterest.getInterest().getInterestId());
-
-				if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-					voicebridgeUserInterest.handleCallPrivate(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISHandsetNo, sPrivacyOn);
-				else
-					voicebridgeUserInterest.handleCallPrivateElsewhere(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISHandsetNo, sPrivacyOn);
-			}
-			publishVoiceBridgeCallEvent(lineInterest);
-		}
-	}
-
-	private void handleTransfer(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sTransferUserNo)
-	{
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, sVDISVoiceBridgeUserNo);
-
-		if (lineInterest!= null)
-		{
-			String sUserNo = String.valueOf(Integer.parseInt(sTransferUserNo));
-
-			if (lineInterest.getUserInterests().containsKey(sUserNo))
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = lineInterest.getUserInterests().get(sUserNo);
-				voicebridgeUserInterest.handleTransfer(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sUserNo);
-			}
-		}
-	}
-
-	private void handleIntercom(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sIntercomUserNo)
-	{
-		String sUserNo1 = String.valueOf(Long.parseLong(sVDISVoiceBridgeUserNo));
-		String sUserNo2 = String.valueOf(Integer.parseInt(sIntercomUserNo));
-
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, sVDISVoiceBridgeUserNo);
-
-		if (lineInterest!= null)
-		{
-			if (lineInterest.getUserInterests().containsKey(sUserNo1))
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = lineInterest.getUserInterests().get(sUserNo1);
-				voicebridgeUserInterest.handleIntercom(sCallNo);
-
-				//publishVoiceBridgeUserDeviceEvent(voicebridgeUserInterest.getUser());
-			}
-
-			if (lineInterest.getUserInterests().containsKey(sUserNo2))
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = lineInterest.getUserInterests().get(sUserNo2);
-				voicebridgeUserInterest.handleIntercom(sCallNo);
-
-				//publishVoiceBridgeUserDeviceEvent(voicebridgeUserInterest.getUser());
-			}
-
-		}
-	}
-
-
-
-	private void handleCallIncoming(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineName, String sRealVDISDDI, String sVDISDDI)
-	{
-		VoiceBridgeInterest lineInterest = getDDIInterest(sRealVDISDDI);
-
-		if (lineInterest!= null)
-		{
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallIncoming(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sRealVDISDDI, sVDISDDI);
-			}
-
-			//theVoiceBridgelinkSession.sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_REQUEST_CLI + sVDISVoiceBridgeLineNo);
-			lineInterests.put(sVDISVoiceBridgeLineNo, lineInterest);
-
-			startWaitForEvent(sVDISVoiceBridgeLineNo, lineInterest, 500); // wait for CLI before publish
-
-		} else {
-
-			lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-
-			if (lineInterest!= null)
-			{
-				Iterator it = lineInterest.getUserInterests().values().iterator();
-
-				while( it.hasNext() )
-				{
-					VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-					voicebridgeUserInterest.handleCallIncoming(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sRealVDISDDI, sVDISDDI);
-				}
-
-				publishVoiceBridgeCallEvent(lineInterest);
-			}
-		}
-	}
-
-	private void handleCallAbandoned(String sCallNo, String sVDISVoiceBridgeLineNo)
-	{
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-
-		if (lineInterest!= null)
-		{
-			cancelWaitForEvent(sVDISVoiceBridgeLineNo);	// stop waiting for CLI
-
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while (it.hasNext())
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallAbandoned(sCallNo, sVDISVoiceBridgeLineNo);
-			}
-
-			// first publish
-
-			publishVoiceBridgeCallEvent(lineInterest);
-
-			// next log call objects
-			// then remove call objects
-
-			Iterator<VoiceBridgeUserInterest> it2 = lineInterest.getUserInterests().values().iterator();
-			boolean logged = false;
-
-			while( it2.hasNext() )
-			{
-				VoiceBridgeUserInterest theUserInterest = (VoiceBridgeUserInterest)it2.next();
-
-				if (theUserInterest.getUser().enabled())
-				{
-					VoiceBridgeCall voicebridgeCall = theUserInterest.getCallByNo(sCallNo);
-
-					if (voicebridgeCall != null)
-					{
-						if ((ClusterManager.isClusteringEnabled() && ClusterManager.isSeniorClusterMember()) || !ClusterManager.isClusteringEnabled())
-						{
-							if (!logged)
-							{
-								theUserInterest.logCall(voicebridgeCall, component.getDomain(), siteID);
-								logged = true;
-							}
-
-							component.voicebridgePlugin.removeCacheContent(lineInterest, theUserInterest, voicebridgeCall);
-						}
-
-						theUserInterest.removeCallByNo(sCallNo);
-					}
-				}
-			}
-		}
-	}
-
-	private void handleCallConnected(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineName, String sVDISVoiceBridgeConsoleNo, String sVDISVoiceBridgeUserNo, String sVDISOldLineState, String sVDISNewLineState, String sVDISHandsetOrSpeaker, String sVDISSpeakerNo, String sVDISHandsetNo, String sVDISConnectOrDisconnect)
-	{
-		Log.debug( "["+ siteName + "] handleCallConnected " + sVDISVoiceBridgeLineNo + " " + sVDISVoiceBridgeLineName);
-
-		try {
-			VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, sVDISVoiceBridgeUserNo);
-
-			if (lineInterest!= null)
-			{
-				Iterator it = lineInterest.getUserInterests().values().iterator();
-
-				while( it.hasNext() )
-				{
-					VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-
-					Log.debug( "["+ siteName + "] handleCallConnected - scan user interest " + voicebridgeUserInterest.getUser().getUserId() + " " + voicebridgeUserInterest.getInterest().getInterestId());
-
-
-					if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()) && "C".equals(sVDISConnectOrDisconnect) && voicebridgeUserInterest.getUser().enabled())
-					{
-						Log.debug( "["+ siteName + "] handleCallConnected - process NextSteps " + sVDISHandsetNo);
-
-						voicebridgeUserInterest.getUser().setWaitingInterest(voicebridgeUserInterest);
-						voicebridgeUserInterest.getUser().processConnectedNextSteps(component, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeConsoleNo, sVDISHandsetNo);
-					}
-
-					Log.debug( "["+ siteName + "] handleCallConnected - process user interest " + voicebridgeUserInterest.getUser().getUserId() + " " + voicebridgeUserInterest.getInterest().getInterestId());
-
-					if ("A".equals(sVDISNewLineState))
-					{
-						if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-						{
-							voicebridgeUserInterest.handleCallConnected(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect, isCallbackAvailable(), isVoiceDropAvailable());
-							userInterests.put(sVDISVoiceBridgeLineNo, voicebridgeUserInterest);
-
-						} else {
-
-							voicebridgeUserInterest.handleConnectionBusy(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-						}
-
-
-					} else if ("B".equals(sVDISNewLineState)) {
-
-							voicebridgeUserInterest.handleBusyLine(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-
-
-					} else if ("I".equals(sVDISNewLineState)) {
-
-							voicebridgeUserInterest.handleConnectionCleared(sCallNo, sVDISVoiceBridgeLineNo, sVDISHandsetNo, sVDISSpeakerNo);
-
-
-					} else if ("H".equals(sVDISNewLineState)) {
-
-
-						if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-						{
-							voicebridgeUserInterest.handleCallHeld(sCallNo, sVDISVoiceBridgeLineNo);
-
-						} else {
-
-							voicebridgeUserInterest.handleCallHeldElsewhere(sCallNo, sVDISVoiceBridgeLineNo);							}
-
-					} else if ("C".equals(sVDISNewLineState)) {
-
-						if ("F".equals(sVDISOldLineState)) {
-
-							if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()) && "D".equals(sVDISConnectOrDisconnect))
-							{
-								// this user left conf
-								voicebridgeUserInterest.handleCallInactive(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-
-							} else { // we must find last user connected to call
-
-								VoiceBridgeCall voicebridgeCall1 = voicebridgeUserInterest.getUser().getCurrentHS1Call();
-								VoiceBridgeCall voicebridgeCall2 = voicebridgeUserInterest.getUser().getCurrentHS2Call();
-
-								if ((voicebridgeCall1 != null && sVDISVoiceBridgeLineNo.equals(voicebridgeCall1.getLine())) || (voicebridgeCall2 != null && sVDISVoiceBridgeLineNo.equals(voicebridgeCall2.getLine())))
-								{
-									voicebridgeUserInterest.handleCallConnected(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect, isCallbackAvailable(), isVoiceDropAvailable());
-									userInterests.put(sVDISVoiceBridgeLineNo, voicebridgeUserInterest);
-								}
-							}
-
-						} else if ("R".equals(sVDISOldLineState)) {
-
-							cancelWaitForEvent(sVDISVoiceBridgeLineNo);	// stop waiting for CLI
-
-							if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-							{
-								voicebridgeUserInterest.handleCallConnected(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect, isCallbackAvailable(), isVoiceDropAvailable());
-								userInterests.put(sVDISVoiceBridgeLineNo, voicebridgeUserInterest);
-
-							} else {
-
-								voicebridgeUserInterest.handleCallIncomingBusy(sCallNo, sVDISVoiceBridgeLineNo);
-							}
-
-						} else {
-
-							if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-							{
-								voicebridgeUserInterest.handleCallConnected(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect, isCallbackAvailable(), isVoiceDropAvailable());
-								userInterests.put(sVDISVoiceBridgeLineNo, voicebridgeUserInterest);
-
-							} else {
-
-								voicebridgeUserInterest.handleConnectionBusy(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-							}
-						}
-
-
-					} else if ("F".equals(sVDISNewLineState)) {
-
-						if ("F".equals(sVDISOldLineState)) {
-
-							if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-							{
-								if ("D".equals(sVDISConnectOrDisconnect)) {
-
-									// this user left conf now
-									voicebridgeUserInterest.handleCallInactive(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-
-								} else {
-
-									// this user joined conf now
-									voicebridgeUserInterest.handleCallConferenced(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-								}
-
-							} // no action for conferenced users.
-
-						} else {
-
-							if (sVDISVoiceBridgeConsoleNo.equals(voicebridgeUserInterest.getUser().getDeviceNo()))
-							{
-								// this user joined conf
-
-								if ("C".equals(sVDISConnectOrDisconnect))
-								{
-									voicebridgeUserInterest.handleCallConferenced(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-								}
-
-							} else { // we must find first user connected to call
-
-								VoiceBridgeCall voicebridgeCall1 = voicebridgeUserInterest.getUser().getCurrentHS1Call();
-								VoiceBridgeCall voicebridgeCall2 = voicebridgeUserInterest.getUser().getCurrentHS2Call();
-
-								if ((voicebridgeCall1 != null && sVDISVoiceBridgeLineNo.equals(voicebridgeCall1.getLine())) || (voicebridgeCall2 != null && sVDISVoiceBridgeLineNo.equals(voicebridgeCall2.getLine())))
-								{
-									voicebridgeUserInterest.handleCallConferenced(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineName, sVDISVoiceBridgeConsoleNo, sVDISVoiceBridgeUserNo, sVDISOldLineState, sVDISNewLineState, sVDISHandsetOrSpeaker, sVDISSpeakerNo, sVDISHandsetNo, sVDISConnectOrDisconnect);
-								}
-							}
-						}
-					}
-
-				}
-
-				publishVoiceBridgeCallEvent(lineInterest);
-
-
-				if ("I".equals(sVDISNewLineState)) // all line connect states except line goes idle
-				{
-					// mark for deletion or delete call objecs from user interests
-					// remove call record from distributed cache
-					// log call record for all user interest who where on the call: duration > 0
-
-					Iterator<VoiceBridgeUserInterest> it3 = lineInterest.getUserInterests().values().iterator();
-
-					while( it3.hasNext() )
-					{
-						VoiceBridgeUserInterest theUserInterest = (VoiceBridgeUserInterest)it3.next();
-
-						if (theUserInterest.getUser().enabled())
-						{
-							VoiceBridgeCall voicebridgeCall = theUserInterest.getCallByNo(sCallNo);
-
-							if (voicebridgeCall != null)
-							{
-								voicebridgeCall.deleted = true; // so we don't publish again
-
-								if ((ClusterManager.isClusteringEnabled() && ClusterManager.isSeniorClusterMember()) || !ClusterManager.isClusteringEnabled())
-								{
-									component.voicebridgePlugin.removeCacheContent(lineInterest, theUserInterest, voicebridgeCall);
-
-									if (sVDISVoiceBridgeConsoleNo.equals(theUserInterest.getUser().getDeviceNo()))
-									{
-										theUserInterest.logCall(voicebridgeCall, component.getDomain(), siteID);
-									}
-								}
-							}
-						}
-					}
-
-					// remove finished call line no and call id from tracking tables and user interest table
-
-					lineInterests.remove(sVDISVoiceBridgeLineNo);
-					userInterests.remove(sVDISVoiceBridgeLineNo);
-
-					if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-					{
-						voicebridgeCallLines.remove(voicebridgeCallIds.get(sVDISVoiceBridgeLineNo));
-						voicebridgeCallIds.remove(sVDISVoiceBridgeLineNo);
-					}
-				}
-			}
-
-		}
-		catch(Exception e) {
-
-			Log.error( "["+ siteName + "] handleCallConnected " + e + " " + sVDISVoiceBridgeLineNo + " " + sVDISVoiceBridgeLineName);
-			e.printStackTrace();
-        }
-	}
-
-
-	private void handleCallProgress(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISChannelNo, String sVDISVoiceBridgeFlag)
-	{
-		Log.debug( "["+ siteName + "] handleCallProgress " + sCallNo + " " + sVDISVoiceBridgeLineNo + " " + sVDISVoiceBridgeFlag);
-
-		if (userInterests.containsKey(sVDISVoiceBridgeLineNo))
-		{
-			VoiceBridgeUserInterest voicebridgeUserInterest = userInterests.get(sVDISVoiceBridgeLineNo);
-			voicebridgeUserInterest.handleCallProgress(sCallNo, sVDISVoiceBridgeLineNo, sVDISChannelNo, sVDISVoiceBridgeFlag);
-
-			publishVoiceBridgeUserCallEvent(voicebridgeUserInterest);
-
-			if("0".equals(sVDISVoiceBridgeFlag))
-			{
-				VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-
-				if (lineInterest!= null)
-				{
-					Iterator it = lineInterest.getUserInterests().values().iterator();
-
-					while( it.hasNext() )
-					{
-						VoiceBridgeUserInterest theUserInterest = (VoiceBridgeUserInterest)it.next();
-
-						if (!theUserInterest.getInterestName().equals(voicebridgeUserInterest.getInterestName()))
-						{
-							theUserInterest.handleCallOutgoingBusy(sCallNo, sVDISVoiceBridgeLineNo);
-							publishVoiceBridgeUserCallEvent(theUserInterest);
-						}
-					}
-				}
-			}
-		}
-	}
-
-    private void handleRecallTransfer(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineNo2, String transferStatusFlag)
-    {
-		Log.debug( "["+ siteName + "] handleRecallTransfer " + sVDISVoiceBridgeLineNo + " " + transferStatusFlag);
-
-		if("0".equals(transferStatusFlag) || "1".equals(transferStatusFlag) || "2".equals(transferStatusFlag))
-		{
-			if (userInterests.containsKey(sVDISVoiceBridgeLineNo))
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = userInterests.get(sVDISVoiceBridgeLineNo);
-				voicebridgeUserInterest.handleRecallTransfer(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineNo2, transferStatusFlag);
-
-				publishVoiceBridgeUserCallEvent(voicebridgeUserInterest);
-			}
-		}
-
-	}
-
-	private void handleCallProceeding(String sCallNo, String sVDISVoiceBridgeLineNo, String sDigits, String sEndFlag)
-	{
-		Log.debug( "["+ siteName + "] handleCallProceeding " + sVDISVoiceBridgeLineNo + " " + sDigits + " " + sEndFlag);
-
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-
-		if (lineInterest!= null)
-		{
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallProceeding(component, sCallNo, sVDISVoiceBridgeLineNo, sDigits, sEndFlag);
-			}
-		}
-	}
-
-
-	private void handleCallCLI(String sCallNo, String sVDISVoiceBridgeLineNo, String cliDigits)
-	{
-		Log.debug( "["+ siteName + "] handleCallCLI " + sVDISVoiceBridgeLineNo + " " + cliDigits);
-
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-		String cliCanonicalNumber = cliDigits;
-
-		if (lineInterest!= null)
-		{
-			cancelWaitForEvent(sVDISVoiceBridgeLineNo);	// stop waiting for CLI
-
-			try {
-				String dialableNumber = component.formatDialableNumber(cliDigits);
-				cliCanonicalNumber = component.formatCanonicalNumber(dialableNumber);
-			}
-			catch(Exception e) {}
-
-			String cliName = cliDigits;
-
-			if (component.voicebridgeLdapService.cliLookupTable.containsKey(cliCanonicalNumber))
-			{
-				cliName = component.voicebridgeLdapService.cliLookupTable.get(cliCanonicalNumber);
-
-				Log.debug( "["+ siteName + "] handleCallCLI found " + cliName + " " + cliDigits);
-			}
-
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallCLI(sCallNo, sVDISVoiceBridgeLineNo, cliDigits, cliName);
-			}
-
-			publishVoiceBridgeCallEvent(lineInterest);
-		}
-
-	}
-
-	private void handleCallMoved(String sCallNo, String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeLineNo2)
-	{
-		VoiceBridgeInterest lineInterest = getLineInterest(sVDISVoiceBridgeLineNo, null);
-
-		if (lineInterest!= null)
-		{
-			Iterator it = lineInterest.getUserInterests().values().iterator();
-
-			while( it.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it.next();
-				voicebridgeUserInterest.handleCallMoved(sCallNo, sVDISVoiceBridgeLineNo, sVDISVoiceBridgeLineNo2);
-
-				userInterests.remove(sVDISVoiceBridgeLineNo);
-				userInterests.put(sVDISVoiceBridgeLineNo2, voicebridgeUserInterest);
-			}
-
-			lineInterests.put(sVDISVoiceBridgeLineNo2, lineInterest);
-			lineInterests.remove(sVDISVoiceBridgeLineNo);
-
-			if (voicebridgeCallIds.containsKey(sVDISVoiceBridgeLineNo))
-			{
-				voicebridgeCallLines.remove(voicebridgeCallIds.get(sVDISVoiceBridgeLineNo));
-				voicebridgeCallIds.remove(sVDISVoiceBridgeLineNo);
-
-				voicebridgeCallIds.put(sVDISVoiceBridgeLineNo2, sCallNo);
-				voicebridgeCallLines.put(sCallNo, sVDISVoiceBridgeLineNo2);
-			}
-
-		}
-	}
 
 	private VoiceBridgeInterest getLineInterest(String sVDISVoiceBridgeLineNo, String sVDISVoiceBridgeUserNo)
 	{
@@ -1707,44 +588,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 			lineInterest = component.voicebridgeLdapService.voicebridgeInterests.get(ddiInterestId);
 		}
 		return lineInterest;
-	}
-
-
-	private void deleteExpiredCalls()
-	{
-		Log.debug( "["+ site.getName() + "] deleteExpiredCalls");
-
-		Iterator it = component.voicebridgeLdapService.voicebridgeInterests.values().iterator();
-
-		while( it.hasNext())
-		{
-			VoiceBridgeInterest voicebridgeInterest = (VoiceBridgeInterest)it.next();
-
-			Iterator it2 = voicebridgeInterest.getUserInterests().values().iterator();
-
-			while( it2.hasNext() )
-			{
-				VoiceBridgeUserInterest voicebridgeUserInterest = (VoiceBridgeUserInterest)it2.next();
-
-				Iterator it3 = voicebridgeUserInterest.getCalls().values().iterator();
-
-				while( it3.hasNext() )
-				{
-					try {
-						VoiceBridgeCall voicebridgeCall = (VoiceBridgeCall)it3.next();
-
-						if (("ConnectionCleared".equals(voicebridgeCall.getState()) || "Unknown".equals(voicebridgeCall.getState())) && (System.currentTimeMillis() - voicebridgeCall.completionTimeStamp) > 30000)
-						{
-							Log.debug( "["+ site.getName() + "] deleteExpiredCalls - " + voicebridgeCall.getCallID() + " " + voicebridgeCall.getCallerNumber(voicebridgeInterest.getInterestType()) + " " + voicebridgeCall.getCalledNumber(voicebridgeInterest.getInterestType()));
-							voicebridgeUserInterest.removeCallById(voicebridgeCall.getCallID());
-						}
-					}
-					catch(Exception e) {
-						break;
-					}
-				}
-			}
-		}
 	}
 
 
@@ -2029,7 +872,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void requestVersion()
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_VERSION);
 
 		}
 		catch(Exception e) {
@@ -2041,7 +883,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void setECKey(String console, String group, String function, String status)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_ECKEY_SET + format10digits(console) + group + format5digits(function) + status);
 
 		}
 		catch(Exception e) {
@@ -2052,7 +893,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void setECKeyLabel(String console, String group, String function, String label)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_ECKEY_SETLABEL + format10digits(console) + group + format5digits(function) + pad(label, 20));
 
 		}
 		catch(Exception e) {
@@ -2064,7 +904,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void getUserConsole(String userID)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_FREE_SEATING + format12digits(userID));
 
 		}
 		catch(Exception e) {
@@ -2075,7 +914,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void selectDDI(String ddi, String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CALLSET_SELECT + format10digits(console) + handset + "00000" + format5digits(ddi));
 
 		}
 		catch(Exception e) {
@@ -2086,7 +924,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void selectLine(String line, String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CONNECT + format10digits(line) + format10digits(console) + handset);
 
 		}
 		catch(Exception e) {
@@ -2097,7 +934,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void voicebridgeTransferCall(String console, String handset, String user)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_TRANSFER + format10digits(console) + handset + format12digits(user));
 
 		}
 		catch(Exception e) {
@@ -2108,7 +944,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void intercomCall(String console, String handset, String user)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_INTERCOM + format10digits(console) + handset + format12digits(user));
 
 		}
 		catch(Exception e) {
@@ -2119,9 +954,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void platformIntercomCall(String console, String user)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_PLATFORM_INTERCOM + format10digits(console) + format12digits(user) + "65");
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_PLATFORM_INTERCOM + format10digits(console) + format12digits(user) + "01");
-
 		}
 		catch(Exception e) {
 			Log.error("["+ siteName + "] platformIntercomCall error: " + e.toString());
@@ -2132,7 +964,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void groupIntercomCall(String console, String group)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_GROUP_INTERCOM + format10digits(console) + format5digits(group) + "65");
 
 		}
 		catch(Exception e) {
@@ -2143,8 +974,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void clearLine(String line)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_FORCE_LINE_CLEAR + format10digits(line));
-
 		}
 		catch(Exception e) {
 			Log.error("["+ siteName + "] clearLine error: " + e.toString());
@@ -2154,7 +983,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void clearCall(String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CLEAR + format10digits(console) + handset);
 
 		}
 		catch(Exception e) {
@@ -2165,7 +993,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void clearIntercom(String console)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CLEAR_PLATFORM_INTERCOM + format10digits(console));
 
 		}
 		catch(Exception e) {
@@ -2176,7 +1003,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void joinELC(String console)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_JOIN_ELC + format10digits(console) + "1");
 
 		}
 		catch(Exception e) {
@@ -2187,7 +1013,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void clearELC(String console)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CLEAR_ELC + format10digits(console) + "1");
 
 		}
 		catch(Exception e) {
@@ -2198,7 +1023,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void privateCall(String console, String handset, String privacy)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_PRIVATE + format10digits(console) + handset + privacy);
 
 		}
 		catch(Exception e) {
@@ -2209,7 +1033,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void dialDigit(String console, String handset, String digit)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_DIAL_DIGIT + format10digits(console) + handset + digit);
 
 		}
 		catch(Exception e) {
@@ -2248,8 +1071,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 					dialableNumber = component.formatDialableNumber(cononicalNumber);
 				}
 
-				//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_DIAL_STRING + format10digits(line) + pad(dialableNumber, 30));
-
 			}
 			catch(Exception e) {
 				Log.error("["+ siteName + "] dialDigits error: " + e.toString());
@@ -2261,7 +1082,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void ringRecall(String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_RING_RECALL + format10digits(console) + handset);
 
 		}
 		catch(Exception e) {
@@ -2272,7 +1092,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void holdCall(String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_HOLD + format10digits(console) + handset);
 
 		}
 		catch(Exception e) {
@@ -2283,8 +1102,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void selectCallset(String callset, String console, String handset)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_CALLSET_SELECT + format10digits(console) + handset + format5digits(callset) + "00000");
-
 		}
 		catch(Exception e) {
 			Log.error("["+ siteName + "] selectCallset error: " + e.toString());
@@ -2295,7 +1112,6 @@ public class VoiceBridgeLinkService extends AbstractLinkService
 	public void requestLineInfo(String line)
 	{
 		try {
-			//sendMessageToVDIS(VDIS_CLIENT_MSG_PREFIX_REQUEST_LINE_INFO + format10digits(line));
 
 		}
 		catch(Exception e) {

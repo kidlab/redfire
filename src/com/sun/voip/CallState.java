@@ -45,8 +45,8 @@ public class CallState {
 	"110 ANSWERED",
 	"200 ESTABLISHED",
 	"290 ENDING",
-	"299 ENDED",
-	"300 RINGING"
+	"299 RINGING",
+	"300 ENDED"
     };
 
     public CallState() {

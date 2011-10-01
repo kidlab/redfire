@@ -24,8 +24,11 @@ import org.jivesoftware.database.SequenceManager;
 import com.ifsoft.iftalk.plugin.voicebridge.SiteDao;
 import com.ifsoft.iftalk.plugin.voicebridge.Site;
 import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgeConstants;
-import com.ifsoft.iftalk.plugin.voicebridge.RedfirePlugin;
+import com.ifsoft.iftalk.plugin.voicebridge.VoiceBridgePlugin;
 import com.ifsoft.iftalk.plugin.tsc.numberformatter.TelephoneNumberFormatter;
+
+import org.red5.server.webapp.voicebridge.Application;
+
 
 
 public class VoiceBridgeSettings extends HttpServlet implements VoiceBridgeConstants  {
@@ -69,11 +72,11 @@ public class VoiceBridgeSettings extends HttpServlet implements VoiceBridgeConst
 
 	private String errorMessage = null;
 
-	private RedfirePlugin plugin;
+	private VoiceBridgePlugin plugin;
 
     public void init(ServletConfig servletConfig) throws ServletException {
         super.init(servletConfig);
-		plugin = (RedfirePlugin)XMPPServer.getInstance().getPluginManager().getPlugin("redfire");
+		plugin = Application.plugin;
     }
 
 

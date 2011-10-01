@@ -54,7 +54,6 @@ import org.dom4j.*;
 import com.ifsoft.iftalk.plugin.voicebridge.*;
 
 
-
 public class Application extends MultiThreadedApplicationAdapter implements IStreamAwareScopeHandler, CallEventListener  {
 
  	private String version = "0.0.0.1";
@@ -63,11 +62,11 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 	private static Site site;
 	private static VoiceBridgeComponent component;
 	private static Map< String, BridgeParticipant > bridgeParticipants 	= new ConcurrentHashMap< String, BridgeParticipant >();
+	public static VoiceBridgePlugin plugin;
 
     private Map< String, LocalClientSession > sessions 				= new ConcurrentHashMap<String, LocalClientSession>();
     private Map< String, IServiceCapableConnection > publishers 	= new ConcurrentHashMap<String, IServiceCapableConnection>();
     private Map< String, String > digests 							= new ConcurrentHashMap<String, String>();
-
 
 
     // ------------------------------------------------------------------------
@@ -84,7 +83,10 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			loginfo( "Red5XMPP starting in scope " + scope.getName() + " " + System.getProperty( "user.dir" ) );
 			loginfo(String.format("Red5XMPP version %s", version));
 
-			SiteDao siteDao = new SiteDao(null);
+			plugin = new VoiceBridgePlugin();
+			plugin.initializePlugin(this);
+
+			SiteDao siteDao = new SiteDao(plugin);
 			ArrayList<Site> sites = (ArrayList) siteDao.getSites();
 
 			if (sites.size() == 0)
@@ -106,7 +108,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			site = sites.get(0);
 
 			config = Config.getInstance();
-			config.initialise(site);
+			config.initialise(site, this);
 
 			String appPath = System.getProperty("user.dir");
 			//String logDir = appPath + File.separator + "log" + File.separator;
@@ -160,6 +162,8 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			session.close();
 			session = null;
 		}
+
+		plugin.destroyPlugin();
     }
 
 
@@ -454,7 +458,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		loginfo("VoiceBridge disconnectFromMUC outgoing presence \n" + presence);
 	}
 
-    public String manageCallParticipant(JID userJID, String uid, String parameter, String value)
+    public String manageCallParticipant(String userJID, String uid, String parameter, String value)
     {
 		String response = null;
 
@@ -467,7 +471,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 				cp.setCallId(uid);
 
 				BridgeParticipant bp = new BridgeParticipant();
-				bp.userJID = userJID;
+				bp.userJID = new JID(userJID);
 				bp.callParticipant = cp;
 
 				bridgeParticipants.put(uid, bp);
@@ -2189,6 +2193,13 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			return response;
 		}
 
+		if ("SetFromPhoneNo".equalsIgnoreCase(parameter))
+		{
+			cp.setFromPhoneNumber(value);
+			return response;
+		}
+
+
 		if ("phonenumberlocation".equalsIgnoreCase(parameter))
 		{
 			cp.setPhoneNumberLocation(value);
@@ -2322,6 +2333,19 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 			} catch (Exception e) {
 				response = ("setSecondPartyTimeout " + value + " is not numeric" );
 			}
+			return response;
+		}
+
+
+		if ("RtmpSendStream".equalsIgnoreCase(parameter))
+		{
+			cp.setRtmpSendStream(value);
+			return response;
+		}
+
+		if ("RtmpRecieveStream".equalsIgnoreCase(parameter))
+		{
+			cp.setRtmpRecieveStream(value);
 			return response;
 		}
 
@@ -2567,8 +2591,6 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 
 			} else if ("RTMP".equals(cp.getProtocol())) {
 
-				cp.setRtmpSendStream("vb_sender_" + System.currentTimeMillis());
-				cp.setRtmpRecieveStream("vb_reciever_" + System.currentTimeMillis());
 				cp.setPhoneNumber("voicebridge@rtmp:/" + cp.getRtmpRecieveStream() + "/" + cp.getRtmpSendStream());
 
 			} else response = "Unsupported bridge protocol";
@@ -2838,7 +2860,7 @@ public class Application extends MultiThreadedApplicationAdapter implements IStr
 		if (component == null)
 		{
 			try {
-				component = RedfirePlugin.plugin.getVoiceBridgeComponentBySiteID(String.valueOf(site.getSiteID()));
+				component = VoiceBridgePlugin.plugin.getVoiceBridgeComponentBySiteID(String.valueOf(site.getSiteID()));
 
 			} catch (Exception e) {
 

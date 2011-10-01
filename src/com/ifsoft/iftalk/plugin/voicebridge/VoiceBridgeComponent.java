@@ -49,6 +49,7 @@ import org.xmpp.packet.JID;
 import org.xmpp.packet.Message;
 import org.xmpp.packet.Packet;
 
+import org.red5.server.webapp.voicebridge.*;
 import com.ifsoft.iftalk.plugin.voicebridge.commands.*;
 import com.ifsoft.iftalk.plugin.tsc.*;
 import com.ifsoft.iftalk.plugin.tsc.numberformatter.TelephoneNumberFormatter;
@@ -59,7 +60,7 @@ public class VoiceBridgeComponent extends AbstractTSComponent implements VoiceBr
 
 	private ComponentManager componentManager;
 	private JID componentJID = null;
-	public RedfirePlugin voicebridgePlugin;
+	public VoiceBridgePlugin voicebridgePlugin;
 
     private ExecutorService executorLink;
     private ExecutorService executorLdap;
@@ -109,7 +110,7 @@ public class VoiceBridgeComponent extends AbstractTSComponent implements VoiceBr
 
 	public void componentEnable()
 	{
-		voicebridgePlugin 	= (RedfirePlugin)XMPPServer.getInstance().getPluginManager().getPlugin("redfire");
+		voicebridgePlugin 	= VoiceBridgePlugin.plugin;
         privateStorage 		= XMPPServer.getInstance().getPrivateStorage();
         componentManager 	= ComponentManagerFactory.getComponentManager();
         openlinkManger 		= new OpenlinkCommandManager();

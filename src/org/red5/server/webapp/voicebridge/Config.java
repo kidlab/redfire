@@ -40,13 +40,17 @@ public class Config implements MUCEventListener {
     private String outsideLinePrefix = "9";  	// for outside line
     private int internalExtenLength = 5;
 
+	public Application application;
+
 
 	private Config() {
 
 	}
 
-	public void initialise(Site site)
+	public void initialise(Site site, Application application)
 	{
+		this.application = application;
+
 		conferences 	= new HashMap<String, Conference>();
 		confExtensions 	= new HashMap<String, Conference>();
 		sipExtensions 	= new HashMap<String, ProxyCredentials>();
@@ -76,7 +80,7 @@ public class Config implements MUCEventListener {
 				}
 			}
 
-			//processRegistrations();
+			processRegistrations();
 
 		} catch (Throwable t) {
 			t.printStackTrace();

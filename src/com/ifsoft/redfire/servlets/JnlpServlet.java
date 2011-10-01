@@ -1,14 +1,20 @@
 package com.ifsoft.redfire.servlets;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 
 import java.io.*;
 import java.util.*;
 import org.jivesoftware.util.JiveGlobals;
+
+import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.util.*;
+
 
 public class JnlpServlet extends HttpServlet {
 
@@ -28,13 +34,15 @@ public class JnlpServlet extends HttpServlet {
 			String port = request.getParameter("port");
 			String screenCodec = request.getParameter("codec");
 			String frameRate = request.getParameter("frameRate");
+			String maxWidth = request.getParameter("maxWidth");
+			String maxHeight = request.getParameter("maxHeight");
 
 			if (stream == null) {
 				stream = "screen_share";
 			}
 
 			if (app == null) {
-				app = "oflaDemo";
+				app = "inspired";
 			}
 
 			if (port == null) {
@@ -46,19 +54,24 @@ public class JnlpServlet extends HttpServlet {
 			}
 
 			if (frameRate == null) {
-				frameRate = "30";
+				frameRate = "15";
 			}
 
+			if (maxWidth == null) {
+				maxWidth = "1024";
+			}
+
+			if (maxHeight == null) {
+				maxHeight = "768";
+			}
 
 			out.println("<?xml version='1.0' encoding='utf-8'?>");
-			out.println("<jnlp spec='1.0+' codebase='http://" + request.getServerName() + ":" + request.getServerPort() + "/redfire/screen'> ");
+			out.println("<jnlp spec='1.0+' codebase='http://" + request.getServerName() + ":" + request.getServerPort() + "/inspired/video'> ");
 			out.println("	<information> ");
 			out.println("		<title>Redfire ScreenShare</title> ");
 			out.println("		<vendor>Dele Olajide</vendor> ");
-			out.println("		<homepage>http://code.google.com/p/red5screnshare</homepage>");
-			//out.println("		<icon href='icon.jpg' />");
-			//out.println("		<icon kind='splash' href='splashicon.jpg' />");
-			out.println("		<description>ScreenShare Client Application</description> ");
+			out.println("		<homepage>http://code.google.com/p/inspired</homepage>");
+			out.println("		<description>Inspired ScreenShare Client Application</description> ");
 			out.println("		<description kind='short'>An Java Webstart application that publishes desktop screen as RTMP video stream</description> ");
 			out.println("		<offline-allowed/> ");
 			out.println("	</information>");
@@ -76,6 +89,8 @@ public class JnlpServlet extends HttpServlet {
 			out.println("		<argument>" + stream + "</argument> ");
 			out.println("		<argument>" + screenCodec + "</argument> ");
 			out.println("		<argument>" + frameRate + "</argument> ");
+			out.println("		<argument>" + maxWidth + "</argument> ");
+			out.println("		<argument>" + maxHeight + "</argument> ");
 			out.println("	</application-desc> ");
 			out.println("</jnlp>");
 			        }

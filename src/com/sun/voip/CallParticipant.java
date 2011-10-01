@@ -67,6 +67,7 @@ public class CallParticipant {
     private int     joinConfirmationTimeout        = 0;
     private String  name                           = null;
     private String  toPhoneNumber                    = null;
+    private String  fromPhoneNumber                    = null;
     private String  phoneNumber                    = null;
     private String  phoneNumberLocation            = null;
     private String  recordDirectory		   = null;
@@ -414,6 +415,10 @@ public class CallParticipant {
 
     public String getToPhoneNumber() {
 	return toPhoneNumber;
+    }
+
+    public String getFromPhoneNumber() {
+	return fromPhoneNumber;
     }
 
     /**
@@ -811,6 +816,10 @@ public class CallParticipant {
 
     public void setToPhoneNumber(String phoneNumber) {
 	this.toPhoneNumber = phoneNumber;
+    }
+
+    public void setFromPhoneNumber(String phoneNumber) {
+	this.fromPhoneNumber = phoneNumber;
     }
 
     /**

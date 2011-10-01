@@ -132,7 +132,7 @@ public class MemberReceiver implements MixDataSource, TreatmentDoneListener {
     private int comfortPayloadsSent = 0;
 
     private long timeCurrentPacketReceived;
-    private long timePreviousPacketReceived;
+    private long timePreviousPacketReceived = 0;
     private long totalTime = 0;
     private long timeToProcessMediaPackets;
     private int mediaPacketsReceived;
@@ -1308,6 +1308,7 @@ public class MemberReceiver implements MixDataSource, TreatmentDoneListener {
     public void handleRTMPMedia(int[] data, short sequenceNumber)
     {
 		timeCurrentPacketReceived = System.currentTimeMillis();
+		timePreviousPacketReceived = timePreviousPacketReceived == 0 ? timeCurrentPacketReceived : timePreviousPacketReceived;
 		int elapsedTime = (int) (timeCurrentPacketReceived - timePreviousPacketReceived);
 
 		synchronized (jitterManager) {

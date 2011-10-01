@@ -129,7 +129,11 @@ private function handleConnected():void
 		nsMe = new NetStream(nc);
 	}
 
-	nsMe.bufferTime = 0;		
+	nsMe.bufferTime = 0;	
+	
+	var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();	
+ 	h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_2); 	
+	nsMe.videoStreamSettings = h264Settings;	
 
 	nsMe.addEventListener(NetStatusEvent.NET_STATUS, function (evt:NetStatusEvent ):void 
 	{	

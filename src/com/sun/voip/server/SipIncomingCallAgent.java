@@ -298,10 +298,8 @@ public class SipIncomingCallAgent extends CallSetupAgent implements SipListener 
     }
 
 
-    public void answerCall(RequestEvent requestEvent) {
-
-		setState(CallState.INVITED);
-
+    public void answerCall(RequestEvent requestEvent)
+    {
 		Request request = requestEvent.getRequest();
 
 		FromHeader fromHeader = (FromHeader) request.getHeader(FromHeader.NAME);

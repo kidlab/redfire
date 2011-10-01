@@ -1,0 +1,888 @@
+<html>
+<head>
+<title>Openlink Demo</title>
+<script language="JavaScript" src="xmpp.js" type="text/javascript"></script>
+<script language="JavaScript" src="openlink.js" type="text/javascript"></script>
+
+<script language="JavaScript">
+	var loginName, ocsName, loginPassword, myJID;
+	var connection, rosterManager, presenceManager, chatManager, chatSessionListener, mucManager, discoManager, openlink;
+	var domain = window.location.hostname;
+	var component = "voicebridge1";
+
+	function OnSelectionChange (ocContacts, ocGroups, ocDgs)
+	{
+		openlinkForm.dest.value = ocContacts;
+	}
+
+	function getParameter(string, parm, delim) {
+
+		 if (string.length == 0) {
+			return '';
+		 }
+
+		 var sPos = string.indexOf(parm + "=");
+
+		 if (sPos == -1) {return '';}
+
+		 sPos = sPos + parm.length + 1;
+		 var ePos = string.indexOf(delim, sPos);
+
+		 if (ePos == -1) {
+			ePos = string.length;
+		 }
+
+		 return unescape(string.substring(sPos, ePos));
+	}
+
+	function getPageParameter(parameterName, defaultValue) {
+
+		var s = self.location.search;
+
+		if ((s == null) || (s.length < 1)) {
+			return defaultValue;
+		}
+
+		s = getParameter(s, parameterName, '&');
+
+		if ((s == null) || (s.length < 1)) {
+			s = defaultValue;
+		}
+
+		return s;
+	}
+
+	function iTraderLogin()
+	{
+		loginName = getPageParameter('username', 'admin');
+		loginPassword = getPageParameter('password', '969131');
+		domain = getPageParameter('domain', domain);
+		component = getPageParameter('component', component);
+
+		document.getElementById("uid").value = Math.random().toString(36).substr(2,9);
+		document.getElementById("uid1").value = Math.random().toString(36).substr(2,9);
+		document.getElementById("uid2").value = Math.random().toString(36).substr(2,9);
+
+		myJID = loginName + "@" + domain;
+		ocsName = "admin@" + domain;
+
+		connection = new XMPPConnection("/http-bind/", window.location.hostname, new MyConnectionListener(loginName, loginPassword));
+		connection.connect();
+
+		openlinkForm.realUser.value = ocsName;
+
+	}
+
+    function iTraderLogoff()
+    {
+		var presence = new XMPP.Presence();
+		presence.setType("unavailable");
+		connection.logout(presence);
+    }
+
+
+	function myRosterHandler()
+	{
+		var rosterObj = rosterManager.getRoster()
+
+		for (var groupName in rosterObj) {
+		    var groupObj = rosterObj[groupName];
+
+		    log("Group - " + groupName);
+
+				for (var userJID in groupObj) {
+					var userObj = groupObj[userJID];
+					log("User - " + userObj.getJID().toString());
+				}
+
+		}
+	}
+
+
+	function myPresenceHandler(myPresence)
+	{
+		//alert(myPresence.toXML());
+	}
+
+
+	MyRosterListener = function()
+	{
+
+	}
+
+	MyRosterListener.prototype.onAdded = function(added)
+	{
+
+		for (var i=0; i < added.length; i++)
+		{
+			Alert(added[i].getJID().toString())
+		}
+	}
+
+
+	MyRosterListener.prototype.onRemoved = function(removed)
+	{
+		for (var i=0; i < removed.length; i++)
+		{
+			Alert(removed[i].getJID().toString())
+		}
+	}
+
+
+	MyRosterListener.prototype.onUpdated = function(updated)
+	{
+		for (var i=0; i < updated.length; i++)
+		{
+			Alert(updated[i].getJID().toString())
+		}
+	}
+
+
+	MyConnectionListener = function(username, password) {
+    		this.username = username;
+    		this.password = password;
+	}
+
+	MyConnectionListener.prototype.connectionSuccessful = function(connection)
+	{
+		chatManager = new org.jive.spank.chat.Manager(connection);
+		chatSessionListener = new org.jive.spank.chat.ChatSessionListener(chatSessionCreated, chatSessionClosed);
+		chatManager.addChatSessionListener(chatSessionListener);
+		mucManager = new org.jive.spank.muc.Manager(connection, chatManager);
+		discoManager = new org.jive.spank.disco.Manager(connection);
+		openlink = new org.xmpp.openlink.Manager(connection, new XMPP.JID(component + "." + domain), openlinkHandler);
+
+		connection.login(this.username, this.password, "openlink");
+	}
+
+	function chatSessionClosed(manager, session) {
+		alert("Chat session closed.");
+	}
+
+	function chatSessionCreated(manager, session) {
+		alert("Chat session created.");
+		session.addListener(new MyMessageListener());
+	}
+
+	MyConnectionListener.prototype.connectionFailed =  function()
+	{
+		alert("XMPP Connection failed");
+	}
+
+
+	MyConnectionListener.prototype.connectionClosed = function(closedConnection, error)
+	{
+		this.cleanUp(closedConnection, error);
+
+		if (error) {
+			alert("Your connection to the server has closed, unexpectedly");
+		}
+		else {
+
+		}
+
+
+	}
+
+	MyConnectionListener.prototype.cleanUp = function(closedConnection, error)
+	{
+		alert("XMPP Connection closed");
+	}
+
+
+	MyConnectionListener.prototype.authenticationSuccessful = function(connection)
+	{
+		presenceManager = new org.jive.spank.presence.Manager(connection, null, "accept");
+		presenceManager.addPresenceListener(myPresenceHandler);
+		presenceManager.sendPresence();
+
+		rosterManager = new org.jive.spank.roster.Manager(connection, myRosterHandler, presenceManager);
+		rosterManager.addRosterListener(new MyRosterListener());
+
+		setTimeout(doServiceDiscovery, 1000)
+
+	}
+
+	MyConnectionListener.prototype.authenticationFailed = function(failedConnection, error)
+	{
+		this.cleanUp(failedConnection, error);
+	}
+
+	MyConnectionListener.prototype.packetsReceived = function()
+	{
+
+	}
+
+	MyConnectionListener.prototype.packetsProcessed = function()
+	{
+
+	}
+
+	MyMessageListener = function() {
+
+	}
+
+
+	MyMessageListener.prototype.messageRecieved =  function(session, message) {
+
+		if (!message.getBody() || message.getBody().body == "") {
+			return;
+		}
+
+		session.sendMessage("Echo - " + message.getBody().body);
+	}
+
+
+
+
+	function doServiceDiscovery() {
+
+		discoManager.discoverInfo(discoInfoHandler, new XMPP.JID(component + "." + domain));
+
+	}
+
+
+	function discoInfoHandler(packet) {
+
+		document.getElementById('log').innerText =  packet.toXML()
+		discoManager.discoverItems(discoItemsHandler, new XMPP.JID(component + "." + domain), "http://jabber.org/protocol/commands");
+	}
+
+
+	function discoItemsHandler(packet) {
+		document.getElementById('profilesBtn').disabled = false
+		document.getElementById('historyBtn').disabled = false
+		document.getElementById('vbBtn1').disabled = false
+		document.getElementById('vbBtn2').disabled = false
+		document.getElementById('vbBtn3').disabled = false
+		document.getElementById('vbBtn4').disabled = false
+		document.getElementById('vbBtn5').disabled = false
+		document.getElementById('vbBtn6').disabled = false
+		document.getElementById('vbBtn7').disabled = false
+		document.getElementById('vbBtn8').disabled = false
+		document.getElementById('vbBtn9').disabled = false
+		document.getElementById('vbBtn10').disabled = false
+
+		document.getElementById('log').innerText = packet.toXML()
+
+	}
+
+
+	function openlinkCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+	}
+
+
+	function openlinkHandler(calls, bridge)
+	{
+		var call, callId, source, target, state, participants, participant, jid, direction, type, actions, interest
+
+		if (bridge != null)
+		{
+			var myTxt = "<table border='1'><thead><tr><th>JID</th><th>Participant ID</th><th>Conference</th><th>Type</th><th>State</th><th>#Participants</th><th>DTMF</th><th>Event Info</th><th>Call Info</th></tr></thead><tbody>";
+			myTxt = myTxt + "<tr valign='top'><td>" + bridge.jid + "</td><td>" + bridge.participant + "</td><td>" + bridge.conference + "</td><td>" + bridge.eventType + "</td><td>" + bridge.callState + "</td><td>" + bridge.participants + "</td><td>" + bridge.dtmf + "</td><td>" + bridge.eventInfo + "</td><td>" + bridge.callInfo + "</td></tr>"
+			document.getElementById('callsDiv').innerHTML = myTxt + "</tbody></table>";
+
+			if (bridge.eventType == "001 STATE CHANGED")
+			{
+				var pos = bridge.callInfo.indexOf("voicebridge@rtmp:/");
+
+				if (pos > -1)
+				{
+					var params = bridge.callInfo.split("/");
+
+					if (params.length == 3)
+					{
+						try {
+
+							if (bridge.callState == "100 INVITED")
+							{
+								document.getElementById('streamControl').contentWindow.location.href = "VoiceBridge.swf?rtmpUrl=rtmp:/voicebridge&senderStream=" + params[2] + "&recieverStream=" + params[1];
+							}
+
+							if (bridge.callState == "299 ENDED")
+							{
+								document.getElementById('streamControl').contentWindow.location.href = "about:blank";
+							}
+
+						} catch (e) {}
+					}
+				}
+			}
+		}
+
+		if (calls.length > 0)
+		{
+			var myTxt = "<table border='1'><thead><tr><th>Id</th><th>Caller</th><th>Called</th><th>State</th><th>Interest</th><th>Actions</th></tr></thead><tbody>";
+
+			for (var i = 0; i < calls.length; i++) {
+
+				call = calls[i]
+				callId = call.callId
+				source = call.caller
+				target = call.called
+				state  = call.state
+				interest = call.interest
+				actions = call.actions;
+				var myActions = ""
+
+				for (var k = 0; k < actions.length; k++)
+				{
+					myActions = myActions + "<a href='javascript:doOpenlinkAction(&quot;" + actions[k] + "&quot;,&quot;" + callId + "&quot;, &quot;" + interest + "&quot;)' >" + actions[k] + "</a><br/>";
+				}
+
+				myTxt = myTxt + "<tr valign='top'><td>" + callId + "</td><td>" + source + "</td><td>" + target + "</td><td>" + state + "</td><td>" + interest + "</td><td>" + myActions + "</td></tr>"
+			}
+
+			document.getElementById('callsDiv').innerHTML = myTxt + "</tbody></table>";
+		}
+	}
+
+	function getProfile()
+	{
+		var profileID = document.getElementById("profileList").value
+		openlink.getProfile(getProfileCallback, profileID);
+	}
+
+	function getProfileCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType);
+
+		else {
+			var keypages = command.keypages;
+
+			var myTxt = "";
+
+			for (var i = 0; i < keypages.length; i++)
+			{
+				var keys = keypages[i].keys;
+
+				if (keys.length > 0)
+				{
+					myTxt = myTxt + "<p/><center><b>" + keypages[i].label + "</b></center><br/>";
+					myTxt = myTxt + "<table><tr><th>Key</th><th>Label</th><th>Function</th><th>Qualifier</th><th>Modifier</th><th>Color</th><th>Interest</th><th>&nbsp;</th></tr>"
+
+					for (var j = 0; j < keys.length; j++)
+					{
+						var key = keys[j];
+						myTxt = myTxt + "<tr valign='top'><td>" + key.id + "</td><td>" + key.label + "</td><td>" + key.keyFunction + "</td><td>" + key.qualifier + "</td><td>" + key.modifier + "</td><td>" + key.color + "</td><td>" + key.interest + "</td><td><input type='button' onclick='keyPress(&quot;" + key.id + "&quot;)' value='Press' /></td></tr>"
+					}
+
+					myTxt = myTxt + "</table>";
+				}
+
+			}
+
+			document.getElementById('keypages').innerHTML = myTxt;
+		}
+
+	}
+
+	function keyPress(key)
+	{
+		var profile = document.getElementById("profileList").value;
+		var feature = document.getElementById("featureList").value;
+		var value2 = null;
+		var value3 = null;
+		openlink.setFeature(genericCallback,  profile, feature, key, value2, value3);
+	}
+
+	function getProfiles()
+	{
+		var realUser = document.getElementById("realUser").value;
+		openlink.getProfiles(getProfilesCallback, realUser);
+	}
+
+	function getProfilesCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+
+		else {
+			var profiles = command.profiles;
+			var text = "<select id='profileList'>";
+
+			for (var i = 0; i < profiles.length; i++)
+			{
+				text = text + "<option value=" + profiles[i].id +">" + profiles[i].label + "</option>";
+			}
+
+			text = text + "</select>";
+			document.getElementById('profileListDiv').innerHTML = text;
+			document.getElementById('profileBtn').disabled = false
+			document.getElementById('interestBtn').disabled = false
+			document.getElementById('interest1Btn').disabled = false
+			document.getElementById('featuresBtn').disabled = false
+		}
+	}
+
+	function getHistory()
+	{
+		var realUser = document.getElementById("realUser").value;
+		openlink.getCallHistory(getHistoryCallback, realUser, "", "", document.getElementById("callType").value, "", "", "0", "50");
+	}
+
+	function getHistoryCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+
+		else {
+			var calls = command.callHistory;
+
+			var myTxt = "<table border=0><thead><tr><th>Total</th><th>Start</th><th>Count</th></tr></thead><tbody><tr><td>" + command.itemsTotal + "</td><td>" + command.itemsStart + "</td><td>" + command.itemsCount + "</td></tr></tbody></table>";
+
+			myTxt = myTxt + "<table border='1'><thead><tr><th>Id</th><th>Direction</th><th>Duration</th><th>Timestamp</th><th>Caller</th><th>Called</th><th>State</th><th>Profile</th><th>Interest</th></tr></thead><tbody>";
+
+			for (var i = 0; i < calls.length; i++) {
+
+				call = calls[i];
+
+				var callId = call.callId;
+				var source = call.caller + "<br/>" + call.calledName;
+				var target = call.called + "<br/>" + call.calledName;
+				var state  = call.state;
+				var interest = call.interest;
+				var profile = call.profile;
+				var direction = call.direction;
+				var duration = call.duration;
+				var timestamp = call.timestamp;
+
+				myTxt = myTxt + "<tr valign='top'><td>" + callId + "</td><td>" + direction + "</td><td>" + duration + "</td><td>" + timestamp + "</td><td>" + source + "</td><td>" + target + "</td><td>" + state + "</td><td>" + profile + "</td><td>" + interest + "</td></tr>"
+			}
+
+			document.getElementById('callsDiv').innerHTML = myTxt + "</tbody></table>";
+		}
+	}
+
+	function getInterests() {
+		var profileID = document.getElementById("profileList").value
+		openlink.getInterests(getInterestsCallback, profileID);
+	}
+
+	function getInterest() {
+		var interestID = document.getElementById("interestList").value
+		openlink.getInterest(getInterestsCallback, interestID);
+	}
+
+	function getInterestsCallback(command)
+	{
+
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+
+		else {
+			var interests = command.interests;
+			var text = "<select id='interestList'>";
+
+			for (var i = 0; i < interests.length; i++)
+			{
+				text = text + "<option value="+ interests[i].id +">" + interests[i].label + "</option>";
+			}
+
+			text = text + "</select>";
+
+			document.getElementById('interestListDiv').innerHTML=text;
+			document.getElementById('monitorBtn').disabled = false
+			document.getElementById('callBtn').disabled = false
+			document.getElementById('callBtn2').disabled = false
+			document.getElementById('requestBtn').disabled = false
+		}
+
+	}
+
+	function manageVoiceMsg()
+	{
+		if (document.getElementById("profileList") != null && document.getElementById("featureList") != null)
+		{
+			var profile = document.getElementById("profileList").value;
+			var feature = document.getElementById("featureList").value;
+			var action = document.getElementById("voiceMsgActions").value;
+			var label = document.getElementById("label").value;
+
+			var features = new Array();
+			features.push(feature)
+
+			openlink.manageVoiceMessage(manageVoiceMsgCallback, profile, features, action, label)
+
+		}
+	}
+
+
+	function createVoiceMsg()
+	{
+		if (document.getElementById("profileList") != null)
+		{
+			var profile = document.getElementById("profileList").value;
+			var action = document.getElementById("voiceMsgActions").value;
+			var label = document.getElementById("label").value;
+
+			openlink.manageVoiceMessage(manageVoiceMsgCallback, profile, null, action, label)
+
+		}
+
+	}
+
+
+	function manageVoiceMsgCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType);
+
+		else {
+
+			if (command.features.length > 0 && command.features[0].voicemessages.length > 0 && command.features[0].voicemessages[0].exten != null)
+			{
+				document.getElementById("dest").value = command.features[0].voicemessages[0].exten;
+			}
+
+		}
+	}
+
+
+
+	function startStream(id)
+	{
+		var realUser = document.getElementById("realUser").value;
+		var participant = document.getElementById("participant" + id).value ;
+		var conference = document.getElementById("conference" + id).value;
+		var participantId = document.getElementById("uid" + id).value + "_stream";
+
+		var action1 = ['protocol', participantId, "RTMP"];
+		var action2 = ['RtmpSendStream', participantId, "sender"];
+		var action3 = ['RtmpRecieveStream', participantId, "reciever"];
+		var action4 = ['SetConference', participantId, conference];
+		var action5 = ['MakeCall', participantId, null];
+
+		var actions = [action1, action2, action3, action4, action5];
+
+		openlink.manageVoiceBridge(genericCallback, realUser, actions)
+	}
+
+	function stopStream(id)
+	{
+		var realUser = document.getElementById("realUser").value;
+		var participantId = document.getElementById("uid" + id).value + "_stream";
+
+		var action1 = ['CancelCall', participantId, null];
+		var actions = [action1];
+
+		openlink.manageVoiceBridge(genericCallback, realUser, actions)
+	}
+
+	function bridge2Party()
+	{
+		var firstParty = document.getElementById("firstParty").value;
+		var secondParty = document.getElementById("secondParty").value;
+		var participantId = document.getElementById("uid").value;
+		var realUser = document.getElementById("realUser").value;
+
+		var action1 = ['SetPhoneNo', participantId, firstParty];
+		var action2 = ['Set2ndPartyPhoneNo', participantId, secondParty];
+		var action3 = ['MakeCall', participantId, null];
+		var actions = [action1, action2, action3];
+
+		openlink.manageVoiceBridge(genericCallback, realUser, actions)
+	}
+
+	function cancelBridge(id)
+	{
+		var participantId = document.getElementById("uid" + id).value;
+		var realUser = document.getElementById("realUser").value;
+
+		var action1 = ['CancelCall', participantId, null];
+		var actions = [action1];
+
+		openlink.manageVoiceBridge(genericCallback, realUser, actions)
+	}
+
+	function bridgeConf(id)
+	{
+		var participantId = document.getElementById("uid" + id).value;
+		var conference = document.getElementById("conference" + id).value;
+		var participant = document.getElementById("participant" + id).value;
+
+		var realUser = document.getElementById("realUser").value;
+
+		var action1 = ['SetPhoneNo', participantId, participant];
+		var action2 = ['SetConference', participantId, conference];
+		var action3 = ['MakeCall', participantId, null];
+
+		var actions = [action1, action2, action3];
+
+		openlink.manageVoiceBridge(genericCallback, realUser, actions)
+	}
+
+
+	function setFeature() {
+		var profile = document.getElementById("profileList").value;
+		var feature = document.getElementById("featureList").value;
+
+		var value1 = null;
+		var value2 = null;
+		var value3 = null;
+
+		if (feature == "fwd_1")
+		{
+			value1 = document.getElementById("interestList").value;
+			value2 = document.getElementById("featureValue").value;
+
+		} else {
+			value1 = document.getElementById("featureValue").value;
+			value2 = document.getElementById("featureValue2").value
+
+			if (feature == "callback_1")
+			{
+				value3 = document.getElementById("featureValue3").value
+			}
+		}
+
+		openlink.setFeature(genericCallback,  profile, feature, value1, value2, value3);
+	}
+
+	function genericCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType);
+	}
+
+
+	function getFeatures() {
+		var profileID = document.getElementById("profileList").value
+		openlink.getFeatures(getFeaturesCallback, profileID);
+	}
+
+	function getFeaturesCallback(command)
+	{
+
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+
+		else {
+			var features = command.features;
+			var text1 = "<select onchange='showFeature(this.options[this.selectedIndex].value)' id='featureList'>";
+
+			for (var i = 0; i < features.length; i++)
+			{
+				text1 = text1 + "<option value="+ features[i].id +">" + features[i].label + " (" + features[i].type + ")</option>";
+			}
+
+			text1 = text1 + "</select>";
+
+			document.getElementById('featureListDiv').innerHTML = text1;
+			document.getElementById('featureBtn').disabled = false
+			document.getElementById('vmBtn').disabled = false
+			document.getElementById('vmBtn2').disabled = false
+
+		}
+
+	}
+
+	function monitorInterest() {
+		var interestID = document.getElementById("interestList").value
+		var realUser = document.getElementById("realUser").value
+		openlink.monitorInterest(openlinkCallback, "pubsub." + domain, realUser, interestID);
+
+	}
+
+	function monitorBridge() {
+		var realUser = document.getElementById("realUser").value
+		openlink.monitorInterest(openlinkCallback, "pubsub." + domain, realUser, realUser);
+
+	}
+
+
+	function openlinkCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+	}
+
+	function makecall()
+	{
+		var destination = document.getElementById("dest").value
+		var realUser = document.getElementById("realUser").value
+		var source = document.getElementById("interestList").value
+		if (source == "Default") source = "";
+		openlink.makeCall(openlinkCallback, realUser, source, destination);
+	}
+
+	function makeFeatureCall()
+	{
+		var destination = document.getElementById("dest").value
+		var realUser = document.getElementById("realUser").value
+		var source = document.getElementById("interestList").value
+		if (source == "Default") source = "";
+		var feature = document.getElementById("featureList").value;
+		var value1 = document.getElementById("featureValue").value;
+		var value2 = document.getElementById("featureValue2").value;
+		openlink.makeFeatureCall(openlinkCallback, realUser, source, destination, feature, value1, value2);
+	}
+
+	function makecallCallback(command)
+	{
+		if (command.note != null)
+			alert(command.note + " " + command.noteType)
+	}
+
+
+	function doOpenlinkAction(action, callId, interest)
+	{
+		var destination = document.getElementById("dest").value;
+
+		if (document.getElementById("featureList") != null)
+		{
+			var feature = document.getElementById("featureList").value;
+
+			if (action == "StartVoiceDrop" || action == "StopVoiceDrop")
+			{
+				openlink.doAction(openlinkCallback, action, callId, interest, feature);
+
+			} else {
+
+				openlink.doAction(openlinkCallback, action, callId, interest, destination);
+			}
+
+		} else {
+
+				openlink.doAction(openlinkCallback, action, callId, interest, destination);
+		}
+	}
+
+	function doRequestAction()
+	{
+		var interestID = document.getElementById("interestList").value
+		var callId = document.getElementById("callid").value;
+		var action = document.getElementById("requestActions").value;
+		var value = document.getElementById("requestValues").value;
+
+		openlink.doAction(openlinkCallback, action, callId, interestID, value);
+	}
+
+
+	function showFeature(id)
+	{
+		openlinkForm.featureValue.value = id;
+	}
+
+
+
+</script>
+
+<style type="text/css">
+
+
+</style>
+</head>
+<body topmargin="0" leftmargin="0" onLoad="iTraderLogin();" onUnload="iTraderLogoff();">
+<form id="openlinkForm" >
+<table>
+	<tr valign='top'>
+		<td width="50%">
+			<table>
+				<tr>
+					<td nowrap>End user JID</td>
+					<td><input type="text" id="realUser" value=""></td>
+					<td><a  id="profilesBtn" disabled="true" href="javascript:getProfiles();">Get Profiles</a></td>
+					<td><a  id="profileBtn" disabled="true" href="javascript:getProfile();">Get Profile</a></td>
+					<td><a  id="historyBtn" disabled="true" href="javascript:getHistory();">Get Call History</a></td>
+					<td><select id="callType"><option value="all">All calls</option><option value="in">Incoming</option><option value="out">Outgoing</option><option value="missed">Missed</option></select></td>
+				</tr>
+				<tr>
+					<td nowrap>Select Profile</td>
+					<td><div id="profileListDiv"></td>
+					<td><a id="interestBtn" disabled="true" href="javascript:getInterests()">Get Interests</a></td>
+					<td><a id="interest1Btn" disabled="true" href="javascript:getInterest()">Get Interest</a></td>
+					<td><a id="featuresBtn" disabled="true" href="javascript:getFeatures()">Get Features</a></td>
+				</tr>
+				<tr>
+					<td nowrap>Features</td>
+					<td><div id="featureListDiv"></td>
+					<td><input type="text" id="featureValue" ></td>
+					<td><input type="text" id="featureValue2" ></br>
+					    <input type="text" id="featureValue3" ></td>
+					<td><a id="featureBtn" disabled="true" href="javascript:setFeature()">Set Feature</a></td>
+				</tr>
+				<tr>
+					<td nowrap>Select Interest</td>
+					<td><div id="interestListDiv"></td>
+					<td><a id="monitorBtn" disabled="true" href="javascript:monitorInterest()">Monitor Interest</a></td>
+				</tr>
+				<tr>
+					<td nowrap>Destination</td>
+					<td><input type="text" id="dest" ></td>
+					<td><a id="callBtn" disabled="true" href="javascript:makecall()">Make Call</a></td>
+					<td><a id="callBtn2" disabled="true" href="javascript:makeFeatureCall()">Make Featured Call</a></td>
+				</tr>
+				<tr>
+					<td nowrap>Request Action</td>
+					<td><select id="requestActions"><option value="JoinCall">JoinCall</option><option value="ClearCall">ClearCall</option></select></td>
+					<td><select id="requestValues"><option value="hs_1">Handset 1</option><option value="hs_2">Handset 2</option></select></td>
+					<td><input type="text" id="callid" ></td>
+					<td><a id="requestBtn" disabled="true" href="javascript:doRequestAction()">Request Action</a></td>
+				</tr>
+				<tr>
+					<td nowrap>Voice Message</td>
+					<td><select id="voiceMsgActions"><option value="create">Create</option><option value="record">Record</option><option value="edit">Edit</option><option value="playback">Playback</option><option value="save">Save</option><option value="archive">Archive</option><option value="delete">Delete</option><option value="query">Query</option></select></td>
+					<td><input type="text" id="label" ></td>
+					<td><a id="vmBtn" disabled="true" href="javascript:manageVoiceMsg()">Manage Voice Message</a></td>
+					<td><a id="vmBtn2" disabled="true" href="javascript:createVoiceMsg()">Create Voice Message</a></td>
+				</tr>
+
+				<tr>
+					<td nowrap>1st Party</td>
+					<td><input type="text" id="firstParty" value='01634251467'><input type="hidden" id="uid"></td>
+					<td nowrap>2nd Party</td>
+					<td><input type="text" id="secondParty" value='07825589457'></td>
+					<td><a id="vbBtn1" disabled="true" href="javascript:bridge2Party()">[Bridge]</a>&nbsp;
+					    <a id="vbBtn3" disabled="true" href="javascript:cancelBridge('')">[Cancel]</a></td>
+					<td><a href="javascript:monitorBridge()">Monitor</a></td>
+				</tr>
+
+				<tr>
+					<td nowrap>Conf Participant 1</td>
+					<td><input type="text" id="participant1" value='1000@192.168.1.64'><input type="hidden" id="uid1"></td>
+					<td nowrap>Conference</td>
+					<td><input type="text" id="conference1" value='3001'></td>
+					<td><a id="vbBtn2" disabled="true" href="javascript:bridgeConf('1')">[Bridge]</a>&nbsp;
+					    <a id="vbBtn4" disabled="true" href="javascript:cancelBridge('1')">[Cancel]</a>&nbsp;
+						<a id="vbBtn5" disabled="true" href="javascript:startStream('1')">[Start&nbsp;Stream]</a>&nbsp;
+						<a id="vbBtn6" disabled="true" href="javascript:stopStream('1')">[Stop&nbsp;Stream]</a>
+					</td>
+				</tr>
+
+				<tr>
+					<td nowrap>Conf Participant 2</td>
+					<td><input type="text" id="participant2" value='01634251893'><input type="hidden" id="uid2"></td>
+					<td nowrap>Conference</td>
+					<td><input type="text" id="conference2" value='3001'></td>
+					<td><a id="vbBtn7" disabled="true" href="javascript:bridgeConf('2')">[Bridge]</a>&nbsp;
+						<a id="vbBtn8" disabled="true" href="javascript:cancelBridge('2')">[Cancel]</a>&nbsp;
+						<a id="vbBtn9" disabled="true" href="javascript:startStream('2')">[Start&nbsp;Stream]</a>&nbsp;
+						<a id="vbBtn10" disabled="true" href="javascript:stopStream('2')">[Stop&nbsp;Stream]</a>
+					</td>
+				</tr>
+
+			</table>
+			<p/>
+			<div id="callsDiv"></div>
+		</td>
+		<td width="50%">
+			<table>
+				<tr>
+					<td><div id="log"></div></td>
+				</tr>
+				<tr>
+					<td><div id='keypages'></div></td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>
+</form>
+<iframe frameborder='0' id='streamControl' width='0' height='0'></iframe>
+</body>
+</html>

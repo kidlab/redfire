@@ -1,23 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <plugin>
-    <class>com.ifsoft.iftalk.plugin.voicebridge.RedfirePlugin</class>
-    <name>VoiceBridge</name>
+    <class>com.ifsoft.redfire.RedfirePlugin</class>
+    <name>Redfire</name>
     <description>Red5 Plugin for Openfire</description>
     <author>Dele Olajide</author>
-    <version>0.0.1.00</version>
-    <minServerVersion>3.6.0</minServerVersion> 
+    <version>0.0.2.1</version>
+    <minServerVersion>3.7.0</minServerVersion> 
     <databaseKey>voicebridge</databaseKey>
     <databaseVersion>0</databaseVersion>
-    
-    <!-- Admin console meta-data -->
-    <adminconsole>              
-        <tab id="tab-voicebridge" name="Redfire" url="voicebridge-summary" description="Click to manage Redfire" >
-		
-            <sidebar id="sidebar-voicebridge-settings" name="Voice Bridge" description="Voice Bridge Settings">
-                <item id="VoiceBridge-SUMMARY"  name="Settings" url="voicebridge-summary" description="Voice Bridge Settings"/>
-             </sidebar>
-		
-        </tab>
-    </adminconsole>
 </plugin>
