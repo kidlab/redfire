@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin>
+    <class>com.ifsoft.redfire.plugin.RedfirePlugin</class>
+    <name>Redfire</name>
+    <description>Red5 Plugin for Openfire</description>
+    <author>Dele Olajide</author>
+    <version>0.0.3.0</version>
+    <minServerVersion>3.7.1</minServerVersion> 
+
+    <adminconsole>              
+        <tab id="TAB-REDFIRE" name="Redfire" url="redfire-properties" description="Click to configure" >
+		
+            <sidebar id="SIDEBAR-REDFIRE-SETTINGS" name="Settings" description="Settings">
+                <item id="REDFIRE-PROPERTIES"      name="Properties" url="redfire-properties" description="Properties"/>                 
+             </sidebar>		
+        </tab>        
+    </adminconsole> 
+</plugin>

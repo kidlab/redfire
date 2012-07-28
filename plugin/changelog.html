@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<html>
+<head>
+	<title>Redfire Changelog</title>
+    <style type="text/css">
+        BODY {
+            font-size : 100%;
+        }
+        BODY, TD, TH {
+            font-family : tahoma, verdana, arial, helvetica, sans-serif;
+            font-size : 0.8em;
+        }
+        H2 {
+             font-size : 10pt;
+             font-weight : bold;
+             padding-left : 1em;
+        }
+        A:hover {
+            text-decoration : none;
+        }
+        H1 {
+            font-family : tahoma, arial, helvetica, sans-serif;
+            font-size : 1.4em;
+            font-weight: bold;
+            border-bottom : 1px #ccc solid;
+            padding-bottom : 2px;
+        }
+
+        TT {
+            font-family : courier new;
+            font-weight : bold;
+            color : #060;
+        }
+        PRE {
+            font-family : courier new;
+            font-size : 100%;
+        }
+    </style>
+</head>
+<body>
+
+<h1>
+</h1>
+
+<p><b>0.0.3.00 -- July 27th 2012</p>
+
+<ul>
+     <li>Changed: Replaced Red5phone with Redfire-Phono</li>
+	 <li>Changed: Added Cumulus OpenRTMFP service for Windows Only. Linux users should build image and modify "cumulus.path"</li>
+	 <li>Changed: Spark plugin can now autodiscover Redfire using mDNS (Multicast DNS )</li>
+</ul>
+
+<p><b>0.0.0.05 -- June 19th 2011</p>
+
+<ul>
+     <li>Fixed: index.html page broken due to last set of changes</li>
+	 <li>Fixed: Prompt for Redfire audio/video n Spark does get removed</li>
+	 <li>Fixed: URL still shows when prompt is displayed in Spark</li>
+	 <li>Changed: RTMP is now the default instead oof RTMFP for 2way and conf audio/video.</li>
+</ul>
+
+
+<p><b>0.0.0.04 -- May 17th 2011</p>
+
+<ul>
+     <li>Changed: Native integration for Window OS users only. The audio/video and screenshare now appear in native Spark windows instead of the browser.</li>
+     <li>Changed: New audio/video applications redfire_video.html and redfire_2way.html developed in Flex to replace the old Openlaszlo apps. A big thank you to Mike Grimwade who started work on this.</li>
+     <li>Changed: Support for Flash Player echo cancellation. You do not need a headset anymore.</li>
+     <li>Changed: Support for RTMFP (peer-to-peer). Audio/Video is sent between clients directly without using the Red5 server provided there is a route between clients otherwise an RTMP connection to Redfire is used.</li>
+</ul>
+
+<p><b>0.0.0.03 -- March 30th 2011</p>
+
+<ul>
+     <li>Changed: Redfire plugin for Spark</li>
+     <li>Changed: Screenshare now supports flash screen codec 2 and allows remote desktop control</li>
+     <li>Changed: Screenshare now shows mouse pointer (cursor)</li>
+     <li>Changed: Screenshare now allows remote desktop control</li>
+     <li>Chnaged: Redfire now acts as an XMPP connection mamager for RTMP connections</li>
+</ul>
+
+<p><b>0.0.0.02 -- November 30th 2010</p>
+
+<ul>
+     <li>Fixed: Compatible with Openfire 3.7.0</li>
+     <li>Fixed: log folder for red5phone now pointing to ../logs</li>
+</ul>
+
+<p><b>0.0.0.01 -- November 24th 2010</p>
+
+<ul>
+     <li>Initial Version</li>
+</ul
+
+</body>
+</html>
