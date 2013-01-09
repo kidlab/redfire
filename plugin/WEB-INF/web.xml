@@ -53,13 +53,7 @@
 		<servlet-class>com.ifsoft.redfire.servlets.JmdnsServlet</servlet-class>
 		<load-on-startup>3</load-on-startup>
 	</servlet>	
-<!--
-	<servlet>
-		<servlet-name>CumulusServlet</servlet-name>
-		<servlet-class>com.ifsoft.redfire.servlets.CumulusServlet</servlet-class>
-		<load-on-startup>4</load-on-startup>
-	</servlet>
--->	
+	
 	<servlet>
 		<servlet-name>screenshare</servlet-name>
 		<servlet-class>com.ifsoft.redfire.servlets.JnlpServlet</servlet-class>

@@ -20,8 +20,9 @@ import org.apache.log4j.Logger;
 public class RedfireAdmin extends HttpServlet
 {
 	private String action                   = "edit";
-	private String cumulusPort	            = "5555";
-	private String cumulusPath	            = "C:\\Program Files\\openfire\\plugins\\redfire\\cumulus\\CumulusServer.exe";
+	private String cumulusPort	            = "1935";
+	private String cumulusKeepAliveServer	= "5";
+	private String cumulusKeepAlivePeer	    = "5";
 
     protected Logger Log = Logger.getLogger(getClass().getName());
 
@@ -52,16 +53,19 @@ public class RedfireAdmin extends HttpServlet
 
 		if(action.equals("edit"))
 		{
-			cumulusPort		= JiveGlobals.getProperty("cumulus.port", cumulusPort);
-			cumulusPath		= JiveGlobals.getProperty("cumulus.path", cumulusPath);
+			cumulusPort		= JiveGlobals.getProperty("voicebridge.rtmfp.port", cumulusPort);
+			cumulusKeepAliveServer		= JiveGlobals.getProperty("voicebridge.rtmfp.keep.alive.server", cumulusKeepAliveServer);
+			cumulusKeepAlivePeer		= JiveGlobals.getProperty("voicebridge.rtmfp.keep.alive.peer", cumulusKeepAlivePeer);
 
 			displayPage(out, errors.size());
 		}
 
 		else if(action.equals("update")) {
 
-			cumulusPort			= request.getParameter("cumulusPort");
-			cumulusPath			= request.getParameter("cumulusPath");
+			cumulusPort				= request.getParameter("cumulusPort");
+			cumulusKeepAliveServer  = request.getParameter("cumulusKeepAliveServer");
+			cumulusKeepAlivePeer  = request.getParameter("cumulusKeepAlivePeer");
+
 
 			validateFields(errors);
 
@@ -70,7 +74,8 @@ public class RedfireAdmin extends HttpServlet
 				try {
 
 					JiveGlobals.setProperty("cumulus.port", cumulusPort);
-					JiveGlobals.setProperty("cumulus.path", cumulusPath);
+					JiveGlobals.setProperty("voicebridge.rtmfp.keep.alive.server", cumulusKeepAliveServer);
+					JiveGlobals.setProperty("voicebridge.rtmfp.keep.alive.peer", cumulusKeepAlivePeer);
 
 					Log.info("Redfire Properties updated");
 				}
@@ -124,10 +129,12 @@ public class RedfireAdmin extends HttpServlet
 			out.println("<div class=\"jive-contentBoxHeader\">Cumulus OpenRTMFP Server</div>");
 			out.println("<div class=\"jive-contentBox\">");
 			out.println("	 <table>");
-			out.println("	 	<tr><td>Cumulus Port</td><td><input size='20' type='text' name='cumulusPort' value='" + cumulusPort + "'></td>");
-			out.println("	 		<td>TCP listening port for media between Openfire and Cumulus.</td></tr>");
-			out.println("	 	<tr><td>Cumulus Aplication path</td><td><input size='50' type='text' name='cumulusPath' value='" + cumulusPath + "'></td>");
-			out.println("	 		<td>Full path to the Cumulus executable file.</td></tr>");
+			out.println("	 	<tr><td>RTMFP UDP Port</td><td><input size='20' type='text' name='cumulusPort' value='" + cumulusPort + "'></td>");
+			out.println("	 		<td>UDP listening port for media between RTMFP server and Flash Player</td></tr>");
+			out.println("	 	<tr><td>Server Keep Alive</td><td><input size='20' type='text' name='cumulusKeepAliveServer' value='" + cumulusKeepAliveServer + "'></td>");
+			out.println("	 		<td>time in seconds for periodically sending packets keep-alive with server, 15s by default (valid value is from 5s to 255s)</td></tr>");
+			out.println("	 	<tr><td>Peer Keep Alive</td><td><input size='20' type='text' name='cumulusKeepAlivePeer' value='" + cumulusKeepAlivePeer + "'></td>");
+			out.println("	 		<td> time in seconds for periodically sending packets keep-alive between peers, 10s by default (valid value is from 5s to 255s)</td></tr>");
 			out.println("	 </table>");
 			out.println("</div>");
 			out.println("");
@@ -151,9 +158,14 @@ public class RedfireAdmin extends HttpServlet
 			errorMessage = "Please specify a port for Cumulus";
 		}
 
-		if(cumulusPath.length() < 1 ) {
-			errors.put("cumulusPath", "");
-			errorMessage = "Please specify the path to the Cumulus executable";
+		if(cumulusKeepAliveServer.length() < 1 ) {
+			errors.put("cumulusKeepAliveServer", "");
+			errorMessage = "Please specify the server keep alive time period";
+		}
+
+		if(cumulusKeepAlivePeer.length() < 1 ) {
+			errors.put("cumulusKeepAlivePeer", "");
+			errorMessage = "Please specify the peer keep alive time period";
 		}
 	}
 

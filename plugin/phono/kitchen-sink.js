@@ -18,45 +18,7 @@ $(document).ready(function() {
     };   
    /**/ 
 
-   function getParameter(string, parm, delim)
-   {
-	 if (string.length == 0)
-	 {
-		return '';
-	 }
 
-	 var sPos = string.indexOf(parm + "=");
-
-	 if (sPos == -1) {return '';}
-
-	 sPos = sPos + parm.length + 1;
-
-	 var ePos = string.indexOf(delim, sPos);
-
-	 if (ePos == -1) {
-		ePos = string.length;
-	 }
-
-	 return unescape(string.substring(sPos, ePos));
-    }
- 
-    function getPageParameter(parameterName, defaultValue) {
-
-	var s = self.location.search;
-
-	if ((s == null) || (s.length < 1)) {
-		return defaultValue;
-	}
-
-	s = getParameter(s, parameterName, '&');
-
-	if ((s == null) || (s.length < 1)) {
-		s = defaultValue;
-	}
-
-	return s;
-    }
-	
     var phonos={}, calls={}, chats={};
     
     function urlParam(name){
@@ -77,8 +39,8 @@ $(document).ready(function() {
         var dialString = "sip:904@mouselike.org";
         var chatString = "admin@" + window.location.hostname;
         var gw = window.location.hostname;
-        var username = getPageParameter("username", null);
-        var password = getPageParameter("password", null);
+        var username = urlParam("username");
+        var password = urlParam("password");
         var jid = username == null ? gw : username + "@" + window.location.hostname + "/redfire";
         
         // Do we have URL parameters to override here?
@@ -167,6 +129,8 @@ $(document).ready(function() {
                 type: audio,
                 jar: "plugins/audio/phono.audio.jar",
                 swf: "plugins/audio/phono.audio.swf",
+		media: {audio:true, video:false},
+                phoneCallback: "sip:84424192@192.168.1.64",                
                 direct: directP2P,
                 onPermissionBoxShow: function(event) {
                     console.log("["+newPhonoID+"] Flash permission box loaded"); 
@@ -188,7 +152,7 @@ $(document).ready(function() {
                     
                     var newCallID = createCallDiv(newPhonoID,"incoming",pttEnabled);
                     var newCallDiv = $("#"+newCallID);
-                    newCallDiv.find(".callHeader .callDetail").html("<strong>Incoming call</strong>");
+                    newCallDiv.find(".callHeader .callDetail").html("Incoming call from " + event.call.remoteJid);
                     newCallDiv.find(".callHeader .callID").html(newCallID);
             	    calls[newCallID] = event.call;
             	    console.log("["+newPhonoID+"] New incoming call");
@@ -260,7 +224,10 @@ $(document).ready(function() {
 			
             },
             onHangup: function() {
-		window.clearInterval(calls[newCallID].energyPoll);
+            
+            	if (calls[newCallID])
+			window.clearInterval(calls[newCallID].energyPoll);
+			
             	calls[newCallID] = null;
             	$("#"+newCallID).slideUp();
             	console.log("["+phonoDiv.attr('id')+"] ["+newCallID+"] Call hungup");
