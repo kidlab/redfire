@@ -1163,7 +1163,7 @@ ASProxy.prototype =
 
    // Fires when the underlying Strophe Connection is estabilshed
    Phono.prototype.handleConnect = function() {
-      this.sessionId = Strophe.getBareJidFromJid(this.connection.jid);
+      this.sessionId = this.connection.jid;
     
       new PluginManager(this, this.config, function(plugins) {
          Phono.events.trigger(this, "ready");
@@ -5063,9 +5063,9 @@ FlashAudio.prototype.transport = function() {
                 nearID = $flash.nearID(cirrus);
             }
             if (nearID != null && nearID != "") {
-                j.c('transport',{xmlns:this.name, peerID:nearID}).c('candidate', {rtmpUri:"rtmfp://" + window.location.hostname, playName:playName, publishName:publishName});
+                j.c('transport',{xmlns:this.name, peerID:nearID}).c('candidate', {rtmpuri:"rtmfp://" + window.location.hostname, playname:playName, publishname:publishName});
             } else {
-                j.c('transport',{xmlns:this.name}).c('candidate', {rtmpUri:"rtmp://" + window.location.hostname + "/xmpp", playName:playName, publishName:publishName});
+                j.c('transport',{xmlns:this.name}).c('candidate', {rtmpuri:"rtmp://" + window.location.hostname + "/xmpp", playname:playName, publishname:publishName});
             }
             
             callback();
@@ -6192,32 +6192,32 @@ WebRTCAudio.prototype.share = function(transport, autoPlay, codec)
 	mute: function(value) {
 	    var muteStatus = false;
 
-	    if (plugin.pc != null && plugin.pc.localStreams.length > 0)
+	    if (plugin.pc != null && plugin.pc.getLocalStreams().length > 0)
 	    {		    
 		    if(arguments.length === 0)
 		    {
-			if (plugin.pc.localStreams[0].audioTracks.length > 0)
+			if (plugin.pc.getLocalStreams()[0].getAudioTracks().length > 0)
 			{
-				muteStatus = !plugin.pc.localStreams[0].audioTracks[0].enabled;
+				muteStatus = !plugin.pc.getLocalStreams()[0].getAudioTracks()[0].enabled;
 			}
 
 		    } else {
 
-			if (plugin.pc.localStreams[0].videoTracks.length > 0)
+			if (plugin.pc.getLocalStreams()[0].getVideoTracks().length > 0)
 			{
-				plugin.pc.localStreams[0].videoTracks[0].enabled = !value;	
+				plugin.pc.getLocalStreams()[0].getVideoTracks()[0].enabled = !value;	
 			}
 
-			if (plugin.pc.localStreams[0].audioTracks.length > 0)
+			if (plugin.pc.getLocalStreams()[0].getAudioTracks().length > 0)
 			{
-				plugin.pc.localStreams[0].audioTracks[0].enabled = !value;
+				plugin.pc.getLocalStreams()[0].getAudioTracks()[0].enabled = !value;
 			}
 		    }
 	    }
 
 	    return muteStatus;
 
-	},
+	},	
 	suppress: function(value) {
 	    return null;
 	},
@@ -6336,7 +6336,7 @@ WebRTCAudio.prototype.transport = function()
 			 .c('webrtc', desc.sdp);
 
 			callback();
-		    }, null, {has_audio: plugin.config.media.audio, has_video: plugin.config.media.video});
+		    });
 
 		};
 
@@ -6414,7 +6414,7 @@ WebRTCAudio.prototype.transport = function()
 
 						callback(); 				
 
-					}, null, {has_audio: plugin.config.media.audio, has_video: plugin.config.media.video});						 
+					});						 
 
 				},
 				function(error) {
@@ -6438,7 +6438,7 @@ WebRTCAudio.prototype.transport = function()
 
 				callback(); 				
 
-			}, null, {has_audio: plugin.config.media.audio, has_video: plugin.config.media.video});
+			});
 		}
 
 		console.log("Created PeerConnection for new OUTBOUND CALL");
@@ -7134,7 +7134,7 @@ Phono.registerPlugin("audio",
    	}
    	this._mute = value;
    	if(this.output) {
-      	this.output.mute(value);
+      	this.output.mute(value, this);
    	}
    };
 
@@ -7192,14 +7192,14 @@ Phono.registerPlugin("audio",
    		if (this._pushToTalk) {
    			if (this._talking) {
    				this.input.volume(20);
-   				this.output.mute(false);
+   				this.output.mute(false, this);
    			} else {
    				this.input.volume(this._volume);
-   				this.output.mute(true);
+   				this.output.mute(true, this);
    			}
    		} else {
    			this.input.volume(this._volume);
-   			this.output.mute(false);
+   			this.output.mute(false, this);
    		}
 	   }
 	};

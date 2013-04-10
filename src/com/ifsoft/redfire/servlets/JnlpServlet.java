@@ -66,7 +66,7 @@ public class JnlpServlet extends HttpServlet {
 			}
 
 			out.println("<?xml version='1.0' encoding='utf-8'?>");
-			out.println("<jnlp spec='1.0+' codebase='http://" + request.getServerName() + ":" + request.getServerPort() + "/inspired/video'> ");
+			out.println("<jnlp spec='1.0+' codebase='" + request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/redfire/screen'> ");
 			out.println("	<information> ");
 			out.println("		<title>Redfire ScreenShare</title> ");
 			out.println("		<vendor>Dele Olajide</vendor> ");

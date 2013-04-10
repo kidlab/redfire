@@ -41,7 +41,7 @@ $(document).ready(function() {
         var gw = window.location.hostname;
         var username = urlParam("username");
         var password = urlParam("password");
-        var jid = username == null ? gw : username + "@" + window.location.hostname + "/redfire";
+        var jid = username == null ? gw : username + "@" + window.location.hostname + "/" + username;
         
         // Do we have URL parameters to override here?
         if (audioType == "auto" && urlParam("audio") != undefined) audioType = urlParam("audio");
@@ -130,7 +130,7 @@ $(document).ready(function() {
                 jar: "plugins/audio/phono.audio.jar",
                 swf: "plugins/audio/phono.audio.swf",
 		media: {audio:true, video:false},
-                phoneCallback: "sip:84424192@192.168.1.64",                
+                phoneCallback: "sip:1000@192.168.1.97",                
                 direct: directP2P,
                 onPermissionBoxShow: function(event) {
                     console.log("["+newPhonoID+"] Flash permission box loaded"); 
